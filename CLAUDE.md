@@ -272,6 +272,37 @@ refactoring.
 
 Record the answers in `fieldMap.ts` and update §5.2 of this file.
 
+### 5.3 When the State publishes a new form revision
+
+Nothing here runs automatically. The form watcher (§16) only opens an issue.
+This procedure starts only when the maintainer, in a Claude Code session, asks
+to "handle issue #N"; then follow these steps in order.
+
+1. **Replace, don't archive.** Download the new PDF from the URL in the issue,
+   save it in `template/` under its new filename, delete the old file in the same
+   commit, and update `template.sha256`, `meta.formRevision`, and the filename in
+   config. Git history is the archive; never keep old revisions in the working
+   tree. For comparison, read the previous revision temporarily from git
+   (`git show <old-commit>:<path>`), and don't commit it back.
+2. **Inventory and stop.** Rerun `dump-form-fields.ts` and `extract-form-text.ts`
+   on both revisions and report the differences, classified as: text-only
+   changes; fields moved or resized; fields added or removed; checklist or page 2
+   statement changes. **Stop for maintainer review**, as in Phase 1.
+3. **Apply, based on the review:**
+   - Text only → update `verbatim.json` (and `fieldLabels`).
+   - Fields moved → update `fieldMap.ts`.
+   - Fields added/removed → update `schema.ts`, the relevant wizard steps,
+     `checklist.ts`, and validation. Bump `meta.schemaVersion` and add a
+     migration so saved drafts from the old revision still load, with new
+     questions shown as unanswered and removed fields dropped.
+   - Changes to complaint types, page 2 statements, attestation, or checklist are
+     §2.2 verbatim text: show the maintainer the exact before/after.
+4. **Verify.** Run all tests, generate sample packets from the fixtures, and stop
+   for the maintainer's visual check of the PDFs before merging.
+5. **Record.** Add a row to the README's form revision log (revision, date
+   adopted, commit), update §5 and §13 of this file, and set
+   `formUpdatePending` back to `false` (§12) if it was turned on. Close the issue.
+
 ---
 
 ## 6. State schema
@@ -422,6 +453,11 @@ day did you move in?" for "Move In Date"). Rules:
 
 Header on every step: "Start over and erase" link (opens erase dialog) and, in
 device mode, the "Saved on this device · Erase" indicator.
+
+When `formUpdatePending` is `true` (§12), show a dismissible notice on the
+Welcome and Send steps: "The State recently updated this form. We're updating
+this tool; for now your complaint will use the previous version of the form."
+Hidden when `false`.
 
 **Native inputs only:** `<input type="date">`, `inputmode="decimal"` for money,
 `type="tel"`, `type="email"`, `autocomplete` attributes on name/address/phone/email,
@@ -745,6 +781,10 @@ export const DOB = {
   tenantLandlordEducation:
     'https://portal.ct.gov/dob/rental-security-deposits/rental-security-deposits/rental-security-deposits',
 };
+
+// Maintainer switch. The app can't detect a new form itself (no network requests),
+// so this is flipped by hand with a one-line commit while §5.3 is in progress.
+export const formUpdatePending = false;
 export const LEGAL_HELP = [
   {
     name: 'Statewide Legal Services of Connecticut',
@@ -922,7 +962,12 @@ builds and from `git rev-parse --short HEAD` locally.
 page, find the link whose path contains `sdcompform-rev` (English, not Spanish),
 download it, compute SHA-256. If the filename or hash differs from the committed
 template, open a GitHub issue (dedupe by title) with the new URL and hash. Never
-auto-replace the template.
+auto-replace the template. The issue body includes:
+
+- the new URL, filename, and hash, and the currently committed ones;
+- "Update procedure: CLAUDE.md §5.3. To handle it, tell Claude Code: handle issue #N";
+- a reminder: "Optional: set `formUpdatePending: true` in config.ts to show users
+  a notice while the update is in progress."
 
 It has two jobs:
 
@@ -994,7 +1039,9 @@ Work phase by phase. Stop at the end of each phase and report to the maintainer.
    `gen-headers.ts`, public source maps, verify CSP in production build (no
    violations in console), Playwright smoke test, CI workflows (incl. keepalive),
    Dependabot, Cloudflare Pages build verification (§16), README (what it is,
-   privacy model, how to update the form template, maintenance commands), Terms and
+   privacy model, how to update the form template (pointing to §5.3),
+   maintenance commands, and a **form revision log** table: revision, date
+   adopted, commit; first row is Rev 8/26), Terms and
    Privacy pages (placeholders for maintainer/attorney text).
 7. **After launch: slim this file** (only when the maintainer asks). Move the
    build-time detail (phases, scaffolding, the full spec) to `docs/SPEC.md`.
@@ -1012,7 +1059,8 @@ Work phase by phase. Stop at the end of each phase and report to the maintainer.
   complaint; ask which phone number tenants should call about security deposit
   complaints (the form lists (860) 240-8154, DOB's web page lists 860-240-8170
   and 1-800-831-7225) and update `config.ts`; give a heads-up about
-  app-originated emails; mention the domain.
+  app-originated emails; ask how long DOB keeps accepting the previous form
+  revision after publishing a new one; mention the domain.
 - Attorney / legal aid review of the disclaimer, Terms, and Privacy text.
 - Finalize app name (consider wording that doesn't imply guaranteed recovery).
   Do this before the attorney review, since the name appears in the disclaimer.
