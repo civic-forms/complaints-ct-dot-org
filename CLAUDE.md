@@ -141,15 +141,21 @@ Adding any other runtime dependency requires maintainer approval.
 
 ### 3.1 pnpm supply-chain settings
 
-In `pnpm-workspace.yaml` (or `.npmrc`, per the pinned pnpm version's docs):
+In `pnpm-workspace.yaml` (pnpm is pinned to 12.x via `packageManager`):
 
-- `minimumReleaseAge: 1440` (1 day). Do not raise it much: it also delays
+- `minimumReleaseAge: 1440` (minutes, so 1 day). Do not raise it much: it also delays
   security patches, and when set explicitly pnpm enforces it strictly (installs
   fail rather than fall back). A Dependabot security PR for a same-day release may
   fail CI until the release is a day old; that's expected, re-run it.
 - Dependency lifecycle/install scripts stay blocked (pnpm default). Keep the
   build-script allowlist empty unless something genuinely breaks; any addition
-  requires maintainer approval.
+  requires maintainer approval. In pnpm 11+ the allowlist is `allowBuilds: {}`
+  (`onlyBuiltDependencies` was removed). `strictDepBuilds` defaults to true, so a
+  new dependency with an unreviewed build script fails the install instead of
+  being skipped silently.
+
+Dev-only dependency beyond the usual toolchain: `pdfjs-dist`. Only
+`scripts/extract-form-text.ts` uses it, and the app never loads it.
 
 ### 3.2 package.json scripts (maintainer utilities)
 
@@ -183,8 +189,11 @@ Edge. Accessibility target: **WCAG 2.1 AA**.
 ├─ public/
 │  └─ fonts/NotoSans-*.ttf
 ├─ scripts/
-│  ├─ dump-form-fields.ts       (Phase 1: AcroForm inventory)
-│  ├─ extract-form-text.ts      (Phase 1: verify verbatim.json; dev-only)
+│  ├─ dump-form-fields.ts       (Phase 1 / §5.3: AcroForm inventory; `pnpm form:dump [pdf]`)
+│  ├─ extract-form-text.ts      (Phase 1 / §5.3: verify verbatim.json; dev-only; `pnpm form:text [pdf]`)
+│  ├─ app-version.ts            (VITE_APP_VERSION resolution, used by vite.config.ts)
+│  ├─ lib/stable-json.ts        (sorted-key JSON so script output diffs cleanly)
+│  ├─ out/                      (gitignored script output: form-fields.json, form-text.json)
 │  └─ gen-headers.ts            (post-build: writes dist/_headers with CSP, §11)
 ├─ src/
 │  ├─ main.tsx
@@ -243,8 +252,10 @@ refactoring.
 - Source page: https://portal.ct.gov/dob/consumer/consumer-complaints/rental-security-deposit-complaints
 - File: `sdcompform-rev-2026.pdf`, footer "Rev 8/26". 3 pages, US Letter.
   - Page 1: tenant, landlord, rental info, yes/no questions, additional comments.
-  - Page 2: complaint types, acknowledgments, signature, date.
-  - Page 3: documentation checklist (no fields; include it unchanged in the packet).
+  - Page 2: complaint types, the "read before signing" statements (text only, with
+    no checkbox), attestation, signature, and date.
+  - Page 3: documentation checklist. It **has** fillable checkboxes, one per
+    checklist line (see §5.2). Whether the app fills them is pending maintainer review.
 - The template is **committed to the repo** with its SHA-256. Never fetch it at
   runtime. At app start (dev builds) and in tests, verify the hash.
 
@@ -261,16 +272,46 @@ refactoring.
   leaving it blank.
 - Email is an accepted submission method per the form header.
 
-### 5.2 Unknowns to resolve in Phase 1 (do not guess)
+### 5.2 Form inventory (Phase 1 findings, **pending maintainer review**)
 
-1. Is the PDF an AcroForm with fillable fields? Field names, types, pages,
-   rects, checkbox export values?
-2. Which yes/no question has the third **NOT SURE** option? (Spanish version
-   suggests Cash for Keys; confirm on English.)
-3. Is Type of Rental (Residential / Vacation) a single choice or two checkboxes?
-4. Exact positions of any field not represented in the AcroForm.
+Taken from `pnpm form:dump`, `pnpm form:text`, and a rendered visual check of
+`sdcompform-rev-2026.pdf` (SHA-256 `dde91f83…d715`). The full per-field output
+(names, rects, export values) is regenerated into `scripts/out/`. `fieldMap.ts`
+is written in Phase 2, after review.
 
-Record the answers in `fieldMap.ts` and update §5.2 of this file.
+1. **AcroForm: yes.** It has 63 fields and no XFA. `NeedAppearances` is unset, and the
+   default appearance is `/Helv 0 Tf` (auto-size). There are 3 pages, each 612 × 792 pt with no rotation.
+   - **Text fields (32), all on page 1.** They cover every tenant, landlord, and rental box, plus
+     follow-ups `IfYes` (interest), `Yes Amount` (deposit returned), the
+     court/roommates/other-properties fields (named after their question
+     text), and `Additional Comments…` (multiline, about 532 × 59 pt). No field has
+     maxLength or comb set.
+   - **Yes/No questions** are mostly **one checkbox field with two widgets**
+     whose on-values are `Yes` and `No` (`Check Box8`/`9`/`10`/`11`/`12`/`14`/`15`).
+     pdf-lib's `check()` only turns on the first widget. To select "No", set
+     `/V` and each widget's `/AS` directly, so the two stay mutually exclusive.
+   - **Page 2:** `Check1`–`Check4` are complaint types 1–4.
+   - **Page 3:** 14 checkboxes, one per checklist line, in order:
+     `Check Boxa/b/c` (all types), `d` (type 1), `h/i/j` and `Check Box1`
+     (type 2; `Check Box1` is the fourth line, and its name is a typo in the PDF), `l/m/n` (type 3),
+     `p/q/t` (type 4).
+   - **Unexplained field:** `IfYes2`, a wide text field on the **correspondence** row.
+     The printed question asks only to "enclose a copy" and has no fill-in
+     instruction, and the schema has no follow-up for it. The proposal is to leave it blank.
+2. **NOT SURE** is on **Cash for Keys**. It uses three *independent* checkboxes:
+   `Check Box13a` = YES, `13b` = NO, `13c` = NOT SURE. The app keeps them
+   mutually exclusive.
+3. **Type of Rental is a single choice**: one field `Check Box6` with two
+   widgets, where on-value `Yes` = Residential and `No` = Vacation. Terms of Rental are two
+   independent fields: `Check Box7` = Lease and `Check Box7a` = Month-To-Month.
+4. **Not in the AcroForm:** **signature and date on page 2** are printed
+   underscores, so they are drawn by coordinates. The printed line's baseline is y ≈ 171. The signature
+   underscores run from x ≈ 93 to 307, and the date underscores from x ≈ 333 to 456. The clear space
+   above the line is up to the attestation line at y ≈ 207. Confirm exact values against sample output in
+   Phase 2.
+
+Also noted on the form: its header says "Dates should be in MM/DD/YY format"
+(consistent with §5.1), and it asks to "Complete both pages" although it has 3 pages.
 
 ### 5.3 When the State publishes a new form revision
 
@@ -822,14 +863,23 @@ How each group is used:
   "On the form: …" reference under plain-language questions (§7), on the review
   screen, and as subheadings on the continuation page. Not the primary question text.
 
-In Phase 1, add a `fieldLabels` object with the exact label of every other
-page 1 field (e.g. `"moveInDate": "Move In Date"`, `"housingComplexName": "Name
-of Housing Complex (if any)"`).
+- `fieldLabels`: the exact printed label of every other page 1 field, keyed by
+  its §6.1 schema path (`tenant.name` → "Your Name", `rental.moveInDate` →
+  "Move In Date"). Used the same way as `page1Labels`.
+- `optionLabels`: the printed answer and checkbox captions (YES, NO, NOT SURE,
+  Residential, Vacation, Lease, Month-To-Month).
+
+Phase 1 checked every string against the template with `pnpm form:text`: 69
+exact matches, plus "Month-To-Month", which matches once spaces are ignored because the PDF
+letter-spaces it. One correction was made: `complaintIntro` now includes the
+form's full sentence, with its "(see the checklist on page 3 …)" parenthetical.
+The JSON below mirrors `src/forms/ct-dob-security-deposit/verbatim.json`.
+Keep them in sync.
 
 ```json
 {
   "forwardingAddressNote": "You must provide your landlord written notice of your forwarding address. The best way is via a letter sent by certified mail with return receipt. If you cannot provide sufficient proof that you sent your landlord written notice, the Department may not be able to assist.",
-  "complaintIntro": "This complaint is being filed against the landlord named above for failing to: (check all that apply)",
+  "complaintIntro": "This complaint is being filed against the landlord named above for failing to: (check all that apply)(see the checklist on page 3 for required documentation required for each type of complaint)",
   "complaintTypes": {
     "formerTenantDepositNotReturned": "I am a former tenant and my landlord failed to return my security deposit",
     "currentTenant62PlusExcessOverOneMonth": "I am a current tenant, 62 years age or older, and my landlord is holding a security deposit in excess of one month's periodic rent *",
@@ -883,6 +933,50 @@ of Housing Complex (if any)"`).
     "correspondenceReceived": "Have you received any correspondence regarding your security deposit? (If \"YES\", enclose a copy including the envelope)",
     "courtAction": "Has there been any court action involving this rental? (if \"YES\", enter docket number)",
     "additionalComments": "Additional Comments (Attach additional pages if necessary)"
+  },
+  "fieldLabels": {
+    "tenant": {
+      "name": "Your Name",
+      "street": "Your Address",
+      "city": "City/Town",
+      "state": "State",
+      "zip": "Zip Code",
+      "daytimePhone": "Daytime Telephone Number",
+      "email": "Email Address (Optional)"
+    },
+    "landlord": {
+      "name": "Landlord's Name",
+      "street": "Street Address",
+      "city": "City/Town",
+      "state": "State",
+      "zip": "Zip Code",
+      "daytimePhone": "Daytime Telephone Number",
+      "email": "Email Address (Optional)"
+    },
+    "rental": {
+      "unitStreet": "Rental Unit Street Address",
+      "housingComplexName": "Name of Housing Complex (if any)",
+      "city": "City/Town",
+      "state": "State",
+      "zip": "Zip Code",
+      "typeOfRental": "Type of Rental",
+      "terms": "Terms of Rental (check all that applied)",
+      "moveInDate": "Move In Date",
+      "moveOutDate": "Move Out Date",
+      "monthlyRentCents": "Amount of Monthly Rent",
+      "lastRentPaidDate": "Date You Last Paid Rent",
+      "securityDepositCents": "Amount of Security Deposit",
+      "otherDepositCents": "Amount of any Other Deposit"
+    }
+  },
+  "optionLabels": {
+    "yes": "YES",
+    "no": "NO",
+    "notSure": "NOT SURE",
+    "residential": "Residential",
+    "vacation": "Vacation",
+    "lease": "Lease",
+    "monthToMonth": "Month-To-Month"
   }
 }
 ```
