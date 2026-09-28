@@ -1,0 +1,102 @@
+{
+  "forwardingAddressNote": "You must provide your landlord written notice of your forwarding address. The best way is via a letter sent by certified mail with return receipt. If you cannot provide sufficient proof that you sent your landlord written notice, the Department may not be able to assist.",
+  "complaintIntro": "This complaint is being filed against the landlord named above for failing to: (check all that apply)(see the checklist on page 3 for required documentation required for each type of complaint)",
+  "complaintTypes": {
+    "formerTenantDepositNotReturned": "I am a former tenant and my landlord failed to return my security deposit",
+    "currentTenant62PlusExcessOverOneMonth": "I am a current tenant, 62 years age or older, and my landlord is holding a security deposit in excess of one month's periodic rent *",
+    "currentTenantUnder62ExcessOverTwoMonths": "I am a current tenant, under the age of 62, and my landlord is holding a security deposit in excess of two months' periodic rent *",
+    "currentTenantNoEscrowInfo": "I am a current tenant and my landlord has not provided information regarding my escrow account * **"
+  },
+  "complaintFootnotes": [
+    "* Department of Banking will close your complaint once tenancy is terminated",
+    "** Department of Banking will confirm the security deposit is in an escrow account, we will not provide the bank account number"
+  ],
+  "page2Heading": "READ THE FOLLOWING BEFORE SIGNING BELOW",
+  "page2Statements": [
+    "In filing this complaint, I understand that the Department of Banking is not my private attorney. I should contact a private attorney if I have any questions concerning my legal rights or responsibilities. I also understand that information I submit to this agency may be considered public information subject to disclosure under the Connecticut Freedom of Information Act, Connecticut General Statutes Section 1-200 et. seq. or Section 36a-21 of the Connecticut General Statutes, which may provide additional protection from disclosure.",
+    "I further understand that I may be required to testify in the event that the Department of Banking takes legal action in connection with my complaint.",
+    "By filing this complaint form, I authorize the Department of Banking to speak about my complaint or share this form and additional documentation included with the person or business I am complaining about or with other regulatory agencies."
+  ],
+  "attestation": "The above complaint is true and accurate to the best of my knowledge.",
+  "checklist": {
+    "all": [
+      "Proof that you paid a security deposit (receipt or front and back of cancelled check)",
+      "Copy of rental agreement(s) if available",
+      "Copy of any correspondence received or sent regarding the complaint"
+    ],
+    "formerTenantDepositNotReturned": [
+      "Proof that you provided your landlord written notice of your forwarding address. The best way is via a letter sent by certified mail with return receipt."
+    ],
+    "currentTenant62PlusExcessOverOneMonth": [
+      "Proof of Age (copy of state or federal ID)",
+      "Letter asking that overage be returned, must provide landlord with proof of age",
+      "Certified Mail Receipt",
+      "Certified Mail Return Receipt"
+    ],
+    "currentTenantUnder62ExcessOverTwoMonths": [
+      "Letter asking that the overage be returned",
+      "Certified Mail Receipt",
+      "Certified Mail Return Receipt"
+    ],
+    "currentTenantNoEscrowInfo": [
+      "Letter to the landlord asking for written notice stating the amount of the security deposit and the name and address of the financial institution where the security deposit is being held",
+      "Certified Mail Receipt",
+      "Certified Mail Return Receipt"
+    ]
+  },
+  "page1Labels": {
+    "cashForKeys": "Did you accept a Cash for Keys offer? (if \"YES\", please provide a copy of the agreement)",
+    "depositReturned": "Has any part of your security deposit been returned? (If \"YES\", enter the amount)",
+    "checkCashed": "Has the check been cashed?",
+    "landlordOtherProperties": "Does the landlord own other properties? (if \"YES\" list the address)",
+    "interestPaid": "Has interest been paid on the Security Deposit (If \"YES\", include date(s) and dollar amount(s))",
+    "roommates": "Did you have roommates or co-renters? (if \"YES\", please provide their names)",
+    "correspondenceReceived": "Have you received any correspondence regarding your security deposit? (If \"YES\", enclose a copy including the envelope)",
+    "courtAction": "Has there been any court action involving this rental? (if \"YES\", enter docket number)",
+    "additionalComments": "Additional Comments (Attach additional pages if necessary)"
+  },
+  "fieldLabels": {
+    "tenant": {
+      "name": "Your Name",
+      "street": "Your Address",
+      "city": "City/Town",
+      "state": "State",
+      "zip": "Zip Code",
+      "daytimePhone": "Daytime Telephone Number",
+      "email": "Email Address (Optional)"
+    },
+    "landlord": {
+      "name": "Landlord's Name",
+      "street": "Street Address",
+      "city": "City/Town",
+      "state": "State",
+      "zip": "Zip Code",
+      "daytimePhone": "Daytime Telephone Number",
+      "email": "Email Address (Optional)"
+    },
+    "rental": {
+      "unitStreet": "Rental Unit Street Address",
+      "housingComplexName": "Name of Housing Complex (if any)",
+      "city": "City/Town",
+      "state": "State",
+      "zip": "Zip Code",
+      "typeOfRental": "Type of Rental",
+      "terms": "Terms of Rental (check all that applied)",
+      "moveInDate": "Move In Date",
+      "moveOutDate": "Move Out Date",
+      "monthlyRentCents": "Amount of Monthly Rent",
+      "lastRentPaidDate": "Date You Last Paid Rent",
+      "securityDepositCents": "Amount of Security Deposit",
+      "otherDepositCents": "Amount of any Other Deposit"
+    }
+  },
+  "optionLabels": {
+    "yes": "YES",
+    "no": "NO",
+    "notSure": "NOT SURE",
+    "residential": "Residential",
+    "vacation": "Vacation",
+    "lease": "Lease",
+    "monthToMonth": "Month-To-Month"
+  }
+}

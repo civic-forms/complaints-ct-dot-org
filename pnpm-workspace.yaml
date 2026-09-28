@@ -1,0 +1,9 @@
+# Supply-chain settings (CLAUDE.md §3.1).
+
+# Only install versions published at least 1 day ago. Explicitly set, so pnpm
+# enforces it strictly (installs fail rather than fall back).
+minimumReleaseAge: 1440
+
+# Dependency build scripts stay blocked. Keep this empty; any addition needs
+# maintainer approval.
+allowBuilds: {}
