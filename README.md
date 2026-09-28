@@ -31,6 +31,15 @@ pnpm form:text [path/to/form.pdf]   # printed text + verbatim.json check
 Both default to the committed template and write JSON to `scripts/out/`
 (gitignored).
 
+## Sample packets
+
+```sh
+pnpm samples    # preview + final PDFs for each fixture → scripts/out/samples/
+```
+
+Built from the fictional fixture states in `tests/fixtures/states.ts`, for
+visually checking the filled form, continuation, index, and exhibit pages.
+
 ## License
 
 MIT
