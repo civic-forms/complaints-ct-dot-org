@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { normalizeState, normalizeZip } from '../../src/core/format/address.ts';
 import { formatDateMMDDYY, isIsoDate, todayIso } from '../../src/core/format/date.ts';
 import { formatCents, parseMoneyToCents } from '../../src/core/format/money.ts';
 import { formatPhone } from '../../src/core/format/phone.ts';
@@ -76,5 +77,30 @@ describe('formatPhone', () => {
     ['555-0123', '555-0123'],
   ])('%s → %s', (input, expected) => {
     expect(formatPhone(input)).toBe(expected);
+  });
+});
+
+describe('normalizeState (two letters, uppercase)', () => {
+  it.each([
+    ['ct', 'CT'],
+    ['C', 'C'],
+    ['Mass.', 'MA'],
+    [' n y ', 'NY'],
+    ['12', ''],
+    ['', ''],
+  ])('%s → %s', (input, expected) => {
+    expect(normalizeState(input)).toBe(expected);
+  });
+});
+
+describe('normalizeZip (five digits)', () => {
+  it.each([
+    ['06103', '06103'],
+    ['06103-1234', '06103'],
+    ['0610', '0610'],
+    ['CT 06103', '06103'],
+    ['abc', ''],
+  ])('%s → %s', (input, expected) => {
+    expect(normalizeZip(input)).toBe(expected);
   });
 });

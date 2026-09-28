@@ -11,11 +11,13 @@ import {
 import type { AttachmentFile } from '../../core/pdf/pages.ts';
 import { sanitize } from '../../core/pdf/text.ts';
 import en from '../../i18n/en.json' with { type: 'json' };
+import { t } from '../../i18n/t.ts';
 import { deriveSlots, type SlotId } from './checklist.ts';
-import { DISCLAIMER_VERSION } from './config.ts';
+import { isDisclaimerAccepted } from './disclaimer.ts';
 import { SIGNATURE_BOX, SIGNED_DATE } from './fieldMap.ts';
-import { fillForm, type UnsupportedChars } from './fill.ts';
+import { fillForm } from './fill.ts';
 import type { DepositComplaintState } from './schema.ts';
+import type { UnsupportedChars } from './values.ts';
 
 export class DisclaimerNotAcceptedError extends Error {
   override name = 'DisclaimerNotAcceptedError';
@@ -40,12 +42,6 @@ export interface BuildOptions {
 export interface ComplaintPacket extends AssembleResult {
   /** Characters that print as "?" because the PDF font can't encode them, per field. */
   unsupportedChars: UnsupportedChars[];
-}
-
-export function isDisclaimerAccepted(state: DepositComplaintState): boolean {
-  return (
-    state.meta.disclaimerVersion === DISCLAIMER_VERSION && Boolean(state.meta.disclaimerAcceptedAt)
-  );
 }
 
 export async function buildComplaintPacket(
@@ -105,7 +101,7 @@ export async function buildComplaintPacket(
     continuationTitle: en.pdf.continuationTitle,
     index: { title: en.pdf.indexTitle, columns: en.pdf.indexColumns, empty: en.pdf.indexEmpty },
     exhibitHeader: ({ number, total, label, page, pages }) =>
-      fillTemplate(en.pdf.exhibitHeader, {
+      t(en.pdf.exhibitHeader, {
         tenantName: displayName,
         number,
         total,
@@ -116,13 +112,11 @@ export async function buildComplaintPacket(
     attachments,
   });
 
+  if (unsupportedChars.length > 0 && import.meta.env?.DEV) {
+    const chars = [...new Set(unsupportedChars.flatMap((u) => u.chars))];
+    console.warn(`Replaced characters the PDF font can't encode: ${chars.join(' ')}`);
+  }
   return { ...result, unsupportedChars };
-}
-
-function fillTemplate(template: string, values: Record<string, string | number>): string {
-  return template.replace(/\{(\w+)\}/g, (match, key: string) =>
-    key in values ? String(values[key]) : match,
-  );
 }
 
 function decodePngDataUrl(dataUrl: string | null): Uint8Array | null {

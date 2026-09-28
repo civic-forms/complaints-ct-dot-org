@@ -75,7 +75,11 @@ export interface DepositComplaintState {
     courtAction: { answer: YesNo; docketNumber: string };
   };
   additionalComments: string;
-  signature: { pngDataUrl: string | null; signedDate: ISODate };
+  /**
+   * Read and sign (§7 step 12). None of this is persisted (§9.2): the signature
+   * is re-drawn, the statements re-acknowledged, and the date reset to today.
+   */
+  signature: { pngDataUrl: string | null; signedDate: ISODate; statementsRead: boolean };
 }
 
 const emptyPerson = (): Person => ({
@@ -134,6 +138,6 @@ export function initialState(): DepositComplaintState {
       courtAction: { answer: null, docketNumber: '' },
     },
     additionalComments: '',
-    signature: { pngDataUrl: null, signedDate: null },
+    signature: { pngDataUrl: null, signedDate: null, statementsRead: false },
   };
 }

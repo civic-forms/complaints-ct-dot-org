@@ -3,7 +3,7 @@ import { describe, expect, it } from 'vitest';
 import { PdfLockedError, PdfUnreadableError } from '../../src/core/pdf/errors.ts';
 import type { AttachmentFile } from '../../src/core/pdf/pages.ts';
 import { TEXT_FIELDS } from '../../src/forms/ct-dob-security-deposit/fieldMap.ts';
-import { textValue } from '../../src/forms/ct-dob-security-deposit/fill.ts';
+
 import {
   buildComplaintPacket,
   DisclaimerNotAcceptedError,
@@ -12,6 +12,7 @@ import {
   type SlotFiles,
 } from '../../src/forms/ct-dob-security-deposit/packet.ts';
 import { initialState } from '../../src/forms/ct-dob-security-deposit/schema.ts';
+import { textValue } from '../../src/forms/ct-dob-security-deposit/values.ts';
 import {
   makeState,
   noAttachments,
