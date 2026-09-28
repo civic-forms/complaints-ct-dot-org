@@ -50,7 +50,7 @@
       "title": "Your situation",
       "intro": "Check each box that applies to you. These are the form's own words.",
       "periodicRentTerm": "Periodic rent",
-      "periodicRentDefinition": "your regular rent payment"
+      "periodicRentDefinition": "your regular rent payment (for most people, monthly rent)"
     },
     "needs": {
       "title": "What you'll need",
@@ -155,7 +155,7 @@
       "interestPayment": "Payment {n}",
       "cashForKeys": "Did you accept a Cash for Keys offer?",
       "cashForKeysTerm": "Cash for Keys",
-      "cashForKeysDefinition": "an agreement in which a landlord pays a tenant to move out",
+      "cashForKeysDefinition": "an offer from a landlord to pay a tenant to move out",
       "roommates": "Did you have roommates or co-renters?",
       "roommateName": "Name {n}",
       "landlordOtherProperties": "Does the landlord own other properties?",

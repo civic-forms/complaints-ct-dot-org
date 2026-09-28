@@ -228,3 +228,27 @@ describe('soft warnings (§6.3)', () => {
     expect(budget(12 * MB)?.message).toContain("don't accept");
   });
 });
+
+describe('empty Move Out Date', () => {
+  const types = (on: Partial<DepositComplaintState['complaintTypes']>) =>
+    makeState({ complaintTypes: on, rental: { moveOutDate: null } });
+  const flagged = (state: DepositComplaintState) =>
+    ids(warnings(state)).includes('rental.moveOutDate');
+
+  it('is noted when box 1 is checked or no type is chosen yet', () => {
+    expect(flagged(initialState())).toBe(true);
+    expect(flagged(types({ formerTenantDepositNotReturned: true }))).toBe(true);
+    expect(
+      flagged(types({ formerTenantDepositNotReturned: true, currentTenantNoEscrowInfo: true })),
+    ).toBe(true);
+  });
+
+  it('is not noted when only boxes 2–4 are checked', () => {
+    expect(flagged(types({ currentTenant62PlusExcessOverOneMonth: true }))).toBe(false);
+    expect(
+      flagged(
+        types({ currentTenantUnder62ExcessOverTwoMonths: true, currentTenantNoEscrowInfo: true }),
+      ),
+    ).toBe(false);
+  });
+});

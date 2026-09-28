@@ -1207,6 +1207,8 @@ Work phase by phase. Stop at the end of each phase and report to the maintainer.
    Output sample PDFs for visual review.
 3. **Wizard + state.** Steps 0–12 except uploads/signature, validation (Send-time
    gating), disclaimer placement, i18n strings, tokens/CSS.
+   - **Phase 3b: question flow redesign.** One question per page, chapters, and
+     the question pattern. Details will come in the Phase 3b plan.
 4. **Uploads + signature.** Image pipeline incl. grayscale toggle, PDF import,
    slots incl. "Other documents", size meter, signature pad.
 5. **Send + storage + erase.** Tiered send, `.eml`, draftStore both backends,
@@ -1237,7 +1239,11 @@ Work phase by phase. Stop at the end of each phase and report to the maintainer.
   and 1-800-831-7225) and update `config.ts`; give a heads-up about
   app-originated emails; ask how long DOB keeps accepting the previous form
   revision after publishing a new one; mention the domain.
-- Attorney / legal aid review of the disclaimer, Terms, and Privacy text.
+- Attorney / legal aid review of the disclaimer, Terms, and Privacy text; the
+  two neutral definitions shown in the wizard ("Cash for Keys: an offer from a
+  landlord to pay a tenant to move out"; "Periodic rent: your regular rent
+  payment (for most people, monthly rent)"); and the complaint-type question
+  flow (coming in Phase 3b).
 - Finalize app name (consider wording that doesn't imply guaranteed recovery).
   Do this before the attorney review, since the name appears in the disclaimer.
   Renaming = change `app.name` in `i18n/en.json`.

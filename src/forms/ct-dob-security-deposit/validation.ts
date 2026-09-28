@@ -137,7 +137,16 @@ export function softWarnings(state: DepositComplaintState, inputs: WarningInputs
     labels.rental.terms,
   );
   emptyFixed(!rental.moveInDate, 'rental.moveInDate', 'rental', labels.rental.moveInDate);
-  emptyFixed(!rental.moveOutDate, 'rental.moveOutDate', 'rental', labels.rental.moveOutDate);
+  // Boxes 2–4 are for current tenants, who have no move-out date yet: only
+  // note an empty one when box 1 is checked or no type is chosen yet.
+  const onlyCurrentTenantTypes =
+    !types.formerTenantDepositNotReturned && Object.values(types).some(Boolean);
+  emptyFixed(
+    !rental.moveOutDate && !onlyCurrentTenantTypes,
+    'rental.moveOutDate',
+    'rental',
+    labels.rental.moveOutDate,
+  );
   for (const key of ['monthlyRentCents', 'securityDepositCents', 'otherDepositCents'] as const) {
     emptyFixed(rental[key] === null, `rental.${key}`, 'money', labels.rental[key]);
   }
