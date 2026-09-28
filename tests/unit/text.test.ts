@@ -8,6 +8,7 @@ import {
   multilineLineHeight,
   sanitize,
   toSingleLine,
+  WIN_ANSI,
   wrapLines,
 } from '../../src/core/pdf/text.ts';
 
@@ -98,5 +99,18 @@ describe('fitText', () => {
     const size = fit?.size ?? 0;
     expect((fit?.lines.length ?? 0) * multilineLineHeight(font, size)).toBeLessThanOrEqual(57);
     expect(fitText('x '.repeat(3000), font, area, { multiline: true })).toBeNull();
+  });
+});
+
+describe('WIN_ANSI', () => {
+  it("equals Helvetica's encodable set in pdf-lib", () => {
+    const helvetica = [...(charset as Set<number>)].sort((a, b) => a - b);
+    const ours = [...(WIN_ANSI as Set<number>)].sort((a, b) => a - b);
+    expect(ours).toEqual(helvetica);
+  });
+
+  it('gives the same sanitize() result as the pdf-lib charset', () => {
+    const text = 'Łódź José – “ok” € 😀 Ω';
+    expect(sanitize(text, WIN_ANSI)).toEqual(sanitize(text, charset));
   });
 });

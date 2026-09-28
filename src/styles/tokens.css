@@ -1,0 +1,71 @@
+/* Design tokens (CLAUDE.md §14). Components use these only. */
+
+:root {
+  /* Type. System fonts, no font files. A self-hosted heading font can be
+     added later by changing --font-heading alone. */
+  --font-system: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  --font-body: var(--font-system);
+  --font-heading: var(--font-system);
+
+  --text-sm: 0.9375rem; /* 15px: secondary text only */
+  --text-base: 1.0625rem; /* 17px: ≥ 16px prevents iOS zoom on focus */
+  --text-lg: 1.25rem;
+  --text-xl: 1.5rem;
+  --text-2xl: 1.875rem;
+  --leading: 1.55;
+  --leading-tight: 1.25;
+
+  /* Spacing */
+  --space-1: 0.25rem;
+  --space-2: 0.5rem;
+  --space-3: 0.75rem;
+  --space-4: 1rem;
+  --space-5: 1.5rem;
+  --space-6: 2rem;
+  --space-7: 3rem;
+
+  --radius: 0.5rem;
+  --radius-sm: 0.25rem;
+  --content-width: 40rem;
+  --touch-min: 44px;
+  --border-width: 1px;
+  --focus-width: 3px;
+
+  /* Colors: light. Calm teal/stone; deliberately not a government palette. */
+  color-scheme: light dark;
+  --color-bg: #faf8f5;
+  --color-surface: #ffffff;
+  --color-text: #1f2328;
+  --color-text-muted: #57606a;
+  --color-border: #cfc9c0;
+  --color-border-strong: #8c857b;
+  --color-accent: #0f6b62;
+  --color-accent-hover: #0b544d;
+  --color-on-accent: #ffffff;
+  --color-accent-soft: #e3f1ee;
+  --color-warning-bg: #fff6e0;
+  --color-warning-border: #b7791f;
+  --color-info-bg: #eef3f8;
+  --color-info-border: #6d8fb0;
+  --color-focus: #1a5fb4;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --color-bg: #16191c;
+    --color-surface: #1f2327;
+    --color-text: #e8e6e3;
+    --color-text-muted: #a8b0b8;
+    --color-border: #3b4148;
+    --color-border-strong: #6e7781;
+    --color-accent: #5cc4b5;
+    --color-accent-hover: #7ed3c6;
+    --color-on-accent: #0b1a18;
+    --color-accent-soft: #1d3632;
+    --color-warning-bg: #3a2e14;
+    --color-warning-border: #d9a441;
+    --color-info-bg: #1c2a38;
+    --color-info-border: #6d8fb0;
+    --color-focus: #8cb8ff;
+  }
+}

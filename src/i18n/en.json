@@ -1,6 +1,226 @@
 {
   "app": {
-    "name": "Security Deposit Helper (working name)"
+    "name": "Security Deposit Helper (working name)",
+    "operator": "[Operator Name]"
+  },
+  "nav": {
+    "back": "Back",
+    "next": "Next",
+    "progress": "Step {n} of {total}",
+    "subProgress": "Question {n} of {total}",
+    "edit": "Edit",
+    "stepsLabel": "Progress"
+  },
+  "footer": {
+    "independent": "Independent project. Not affiliated with the State of Connecticut.",
+    "source": "Source code"
+  },
+  "common": {
+    "onTheForm": "On the form: {label}",
+    "optional": "(optional)",
+    "addAnother": "Add another",
+    "remove": "Remove",
+    "removeItem": "Remove {item}",
+    "dismiss": "Dismiss",
+    "formUpdatePending": "The State recently updated this form. We're updating this tool; for now your complaint will use the previous version of the form.",
+    "opensNewTab": "(opens in a new tab)",
+    "unprintable": "The form can't print {chars}. Please use a plain letter instead.",
+    "moneyInvalid": "Enter an amount in dollars, like 1250 or 1,250.00.",
+    "charQuote": "'{char}'",
+    "listJoin": ", "
+  },
+  "steps": {
+    "welcome": {
+      "title": "Welcome",
+      "intro": "This free tool helps you fill out the State of Connecticut Department of Banking's Rental Security Deposit Complaint Form, add your documents, and send it from your own email.",
+      "time": "It usually takes about 20 to 30 minutes.",
+      "notice": "Not legal advice. Not a government website. We count anonymous usage to improve the tool; we never collect what you type or upload.",
+      "deviceHeading": "Can anyone else use this device?",
+      "startSession": "Start — don't save anything after I close this tab",
+      "startSessionHint": "Choose this if others use this device, or you're not sure",
+      "startDevice": "Start and save my progress on this device",
+      "startDeviceHint": "Only if you're the only one who uses it",
+      "spanishHeading": "Formulario en español",
+      "spanishText": "The Department of Banking publishes an official Spanish version of this form.",
+      "spanishLink": "Ver el formulario en español en el sitio del Departamento de Bancos",
+      "legalHelpHeading": "Legal help",
+      "legalHelpText": "For questions about your rights, you can contact:"
+    },
+    "situation": {
+      "title": "Your situation",
+      "intro": "Check each box that applies to you. These are the form's own words.",
+      "periodicRentTerm": "Periodic rent",
+      "periodicRentDefinition": "your regular rent payment (for most people, monthly rent)"
+    },
+    "needs": {
+      "title": "What you'll need",
+      "intro": "Based on the boxes you checked, the form's checklist (page 3) asks for these documents. You can add them later, on the Documents step. Nothing here stops you from continuing.",
+      "noTypes": "Check at least one box on the previous step to see the documents that go with it."
+    },
+    "aboutYou": {
+      "title": "About you"
+    },
+    "landlord": {
+      "title": "Your landlord"
+    },
+    "rental": {
+      "title": "The rental"
+    },
+    "money": {
+      "title": "Money"
+    },
+    "moreQuestions": {
+      "title": "More questions"
+    },
+    "documents": {
+      "title": "Documents",
+      "placeholder": "Adding files is coming in the next update. These are the places your documents will go:"
+    },
+    "comments": {
+      "title": "Additional comments",
+      "count": "{count} characters",
+      "overflowNote": "If your comments don't fit in the box on the form, the full text continues on an extra page."
+    },
+    "disclaimer": {
+      "title": "Before we put your packet together"
+    },
+    "review": {
+      "title": "Review",
+      "intro": "Check your answers. This is what goes on your form.",
+      "missingHeading": "Needed before you can send",
+      "missingNone": "Everything required is filled in.",
+      "warningsHeading": "Things to check",
+      "warningsIntro": "These won't stop you from sending.",
+      "previewButton": "Preview PDF",
+      "previewBuilding": "Preparing your preview…",
+      "previewError": "We couldn't prepare the preview.",
+      "previewRetry": "Try again",
+      "previewNeedsDisclaimer": "The preview is ready once you've read and accepted the notice.",
+      "previewNeedsDisclaimerLink": "Go to the notice",
+      "notAnswered": "Not answered",
+      "empty": "Empty",
+      "checked": "Checked",
+      "notChecked": "Not checked",
+      "none": "None checked"
+    },
+    "sign": {
+      "title": "Read and sign",
+      "readCheckbox": "I have read the statements above",
+      "signaturePlaceholder": "The signature pad is coming in the next update.",
+      "dateLabel": "Date",
+      "dateHelp": "This is set to today's date each time you open this step."
+    }
+  },
+  "fields": {
+    "tenant": {
+      "name": "What is your full name?",
+      "street": "What is your current street address?",
+      "city": "City or town",
+      "state": "State",
+      "zip": "Zip code",
+      "daytimePhone": "What phone number can the Department reach you at during the day?",
+      "email": "Your email address"
+    },
+    "landlord": {
+      "name": "What is your landlord's name?",
+      "street": "Your landlord's street address",
+      "city": "City or town",
+      "state": "State",
+      "zip": "Zip code",
+      "daytimePhone": "What phone number can your landlord be reached at during the day?",
+      "email": "Your landlord's email address"
+    },
+    "rental": {
+      "unitStreet": "What is the street address of the rental unit?",
+      "housingComplexName": "Name of the housing complex, if there is one",
+      "city": "City or town",
+      "state": "State",
+      "zip": "Zip code",
+      "typeOfRental": "What type of rental was it?",
+      "terms": "What were the terms of the rental? Check all that applied.",
+      "moveInDate": "What day did you move in?",
+      "moveOutDate": "What day did you move out?",
+      "monthlyRentCents": "How much was your monthly rent?",
+      "lastRentPaidDate": "What day did you last pay rent?",
+      "securityDepositCents": "How much was your security deposit?",
+      "otherDepositCents": "How much was any other deposit?"
+    },
+    "questions": {
+      "depositReturned": "Has any part of your security deposit been returned?",
+      "depositReturnedAmount": "How much was returned?",
+      "checkCashed": "Has the check been cashed?",
+      "interestPaid": "Has interest been paid on the Security Deposit?",
+      "interestDate": "Date paid",
+      "interestAmount": "Amount paid",
+      "interestPayment": "Payment {n}",
+      "cashForKeys": "Did you accept a Cash for Keys offer?",
+      "cashForKeysTerm": "Cash for Keys",
+      "cashForKeysDefinition": "an offer from a landlord to pay a tenant to move out",
+      "roommates": "Did you have roommates or co-renters?",
+      "roommateName": "Name {n}",
+      "landlordOtherProperties": "Does the landlord own other properties?",
+      "propertyAddress": "Address {n}",
+      "correspondenceReceived": "Have you received any correspondence regarding your security deposit?",
+      "correspondenceNote": "You can add a copy on the Documents step.",
+      "courtAction": "Has there been any court action involving this rental?",
+      "docketNumber": "Docket number",
+      "docketHelp": "The docket number is printed at the top of court papers.",
+      "additionalComments": "Anything else you want the Department to know, in your own words."
+    }
+  },
+  "validation": {
+    "required": {
+      "complaintType": "Check at least one complaint type",
+      "disclaimer": "Read and accept the notice",
+      "signature": "Sign the form",
+      "statementsRead": "Confirm you have read the statements"
+    },
+    "warnings": {
+      "empty": "The form asks for this. If you don't know, you can type \"Unknown\".",
+      "emptyFixed": "The form asks for this.",
+      "notAnswered": "The form asks for this question to be answered.",
+      "box1WithCurrent": "Box 1 is for former tenants; boxes 2–4 are for current tenants. Please check your selection.",
+      "box2And3": "Box 2 is for tenants 62 or older; box 3 is for tenants under 62. Please check your selection.",
+      "moveOutBeforeMoveIn": "The move-out date is before the move-in date.",
+      "futureDate": "This date is in the future.",
+      "followUpEmpty": "You answered YES, and this part is still empty.",
+      "slotEmpty": "No files added yet.",
+      "budgetWarn": "The packet is {size} MB. That is close to the 10 MB limit many email services have.",
+      "budgetOver": "The packet is {size} MB. Many email services don't accept attachments over 10 MB."
+    }
+  },
+  "disclaimer": {
+    "heading": "Before we put your packet together: please read this.",
+    "sections": [
+      {
+        "title": "In short:",
+        "body": "{appName} is a free tool that helps you fill out and send the State of Connecticut Department of Banking's Security Deposit Complaint Form. It is not a lawyer and cannot give you legal advice. You decide everything that goes on your form."
+      },
+      {
+        "title": "This is not legal advice.",
+        "body": "{appName} is a document preparation tool. It types the information you enter onto the official state form and attaches the documents you upload, so you can send the packet yourself. It does not review your situation, tell you which boxes to check, suggest what to write, evaluate your evidence, or predict any outcome. Nothing in this tool is legal advice, and using it does not create an attorney-client relationship with anyone. If you have questions about your legal rights or options, contact a licensed Connecticut attorney or a legal aid organization such as Statewide Legal Services of Connecticut or CTLawHelp.org."
+      },
+      {
+        "title": "We are not the government.",
+        "body": "{appName} is an independent open-source project. It is not affiliated with, endorsed by, or operated by the State of Connecticut or the Department of Banking. The Department decides whether and how to handle your complaint."
+      },
+      {
+        "title": "You are responsible for your form.",
+        "body": "Everything on your form comes from you. When you sign, you are telling the State that your complaint is true and accurate to the best of your knowledge. Check your form carefully on the review screen before you send it."
+      },
+      {
+        "title": "What happens to your information.",
+        "body": "Your form and documents are created on your device and never sent to our servers. You send the finished packet to the Department of Banking yourself, from your own email. To improve the tool, we count anonymous usage, like which steps people complete and when something breaks. We never collect what you type or upload, and we don't use cookies. The official form states that the Department may share your complaint and documents with your landlord and with other agencies, and that your submission may be public under Connecticut's Freedom of Information Act. Unless you choose to save your progress on this device, what you enter is erased when you close this tab."
+      },
+      {
+        "title": "No guarantees.",
+        "body": "This tool is provided \"as is,\" without warranties of any kind. We cannot guarantee that your email will be received or processed, or that your complaint will succeed. Keep a copy of your packet, and contact the Department if you do not hear back. To the fullest extent permitted by law, {operator} and the project's contributors are not liable for any loss arising from your use of this tool."
+      }
+    ],
+    "checkNotLawyer": "I understand that {appName} is a document preparation tool, not a lawyer, and that it does not give legal advice.",
+    "checkResponsible": "I understand that I am responsible for the accuracy of everything I submit, and that I am responsible for sending my completed form to the Connecticut Department of Banking.",
+    "agree": "I agree, show my form",
+    "accepted": "You accepted this notice."
   },
   "pdf": {
     "documentTitle": "Security Deposit Complaint Form",

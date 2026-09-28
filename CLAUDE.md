@@ -123,6 +123,7 @@ information in general.
 | Styling           | Plain CSS with custom properties (design tokens). No CSS framework, no component library                                     |
 | PDF               | `pdf-lib`                                                                                                                    |
 | Font              | PDF: pdf-lib standard fonts Helvetica / Helvetica-Bold (WinAnsi encoding); no font files are bundled or embedded (§8.2)      |
+| UI font           | System font stack, no font files. Set only via tokens `--font-body` / `--font-heading` in `tokens.css` (§14)                 |
 | Signature         | Hand-written canvas component (Pointer Events) — no library                                                                  |
 | Image compression | Hand-written canvas pipeline — no library                                                                                    |
 | Lint/format       | Biome                                                                                                                        |
@@ -196,7 +197,7 @@ Edge. Accessibility target: **WCAG 2.1 AA**.
 │  └─ gen-headers.ts            (post-build: writes dist/_headers with CSP, §11)
 ├─ src/
 │  ├─ main.tsx
-│  ├─ app/                      (app shell, wizard controller, step registry)
+│  ├─ app/                      (App.tsx shell + wizard controller; progress.ts; config.ts source URL)
 │  ├─ core/                     (form-agnostic, reusable across future tools)
 │  │  ├─ pdf/                   (assemble.ts packet assembly; text.ts sanitize + fitting;
 │  │  │                          acroform.ts checkbox/text helpers; pages.ts continuation,
@@ -206,25 +207,32 @@ Edge. Accessibility target: **WCAG 2.1 AA**.
 │  │  ├─ send/                  (share sheet, mailto, .eml builder)
 │  │  ├─ storage/               (draftStore interface + session/IndexedDB backends)
 │  │  ├─ erase/                 (erase routine + dialog)
-│  │  ├─ format/                (dates, money, phone)
+│  │  ├─ format/                (dates, money, phone, address: State/Zip normalizers)
 │  │  ├─ telemetry/             (events.ts allowlist, sender, error capture, §19)
-│  │  └─ ui/                    (shared field components)
+│  │  ├─ ui/                    (fields.tsx: shared field components; copy via props)
+│  │  └─ blob-urls.ts           (object URL registry, revoked by erase §9.3)
 │  ├─ forms/
 │  │  └─ ct-dob-security-deposit/
 │  │     ├─ template/
 │  │     │  ├─ sdcompform-rev-2026.pdf
-│  │     │  └─ template.sha256
+│  │     │  ├─ template.sha256
+│  │     │  └─ loader.ts        (the only importer of the PDF: `?inline`, decoded in memory, §8)
+│  │     ├─ assets.ts           (loadPdfAssets(): lazy, memoized import of loader.ts)
+│  │     ├─ preview.ts          (lazy entry for the UI: buildPacket(state, files, mode))
 │  │     ├─ schema.ts           (state types + initial state)
 │  │     ├─ fieldMap.ts         (schema path → AcroForm field OR coordinates)
-│  │     ├─ fill.ts             (state → form fields: formatting, §6.2 follow-ups, fitting)
+│  │     ├─ values.ts           (textValue + per-field sanitize; no pdf-lib; live char check)
+│  │     ├─ fill.ts             (state → form fields: §6.2 follow-ups, fitting)
 │  │     ├─ packet.ts           (buildComplaintPacket: preview/final, disclaimer gate, filename)
+│  │     ├─ disclaimer.ts       (isDisclaimerAccepted / acceptDisclaimer)
 │  │     ├─ verbatim.json       (exact form text shown in UI)
 │  │     ├─ checklist.ts        (derive evidence slots from state)
-│  │     ├─ validation.ts
-│  │     ├─ steps/              (wizard step components)
+│  │     ├─ validation.ts       (missingRequired / canSend / softWarnings, §6.3)
+│  │     ├─ steps/              (ids.ts StepId list; index.ts registry; one component per step)
 │  │     └─ config.ts           (DOB email, phones, form URL, filename pattern)
 │  ├─ i18n/
-│  │  └─ en.json                (ALL UI strings; no hard-coded copy in components)
+│  │  ├─ en.json                (ALL UI strings; no hard-coded copy in components)
+│  │  └─ t.ts                   (`{placeholder}` filling; `{appName}`/`{operator}` from `app`)
 │  └─ styles/
 │     ├─ tokens.css
 │     └─ base.css
@@ -336,8 +344,9 @@ to "handle issue #N"; then follow these steps in order.
 
 1. **Replace, don't archive.** Download the new PDF from the URL in the issue,
    save it in `template/` under its new filename, delete the old file in the same
-   commit, and update `template.sha256`, `meta.formRevision`, and the filename in
-   config. Git history is the archive; never keep old revisions in the working
+   commit, and update `template.sha256`, `meta.formRevision`, the filename in
+   config, and the `?inline` import path in `template/loader.ts` (a test checks
+   all three agree). Git history is the archive; never keep old revisions in the working
    tree. For comparison, read the previous revision temporarily from git
    (`git show <old-commit>:<path>`), and don't commit it back.
 2. **Inventory and stop.** Rerun `dump-form-fields.ts` and `extract-form-text.ts`
@@ -425,7 +434,11 @@ interface DepositComplaintState {
     courtAction: { answer: YesNo; docketNumber: string };
   };
   additionalComments: string;
-  signature: { pngDataUrl: string | null; signedDate: ISODate };
+  signature: {
+    pngDataUrl: string | null;
+    signedDate: ISODate;
+    statementsRead: boolean; // "I have read the statements above" (§6.3 hard requirement)
+  };
 }
 ```
 
@@ -505,7 +518,7 @@ day did you move in?" for "Move In Date"). Rules:
 | 9   | Additional comments | Free textarea. Neutral prompt only (§2.2). Character count. Note that long text continues on an extra page.                                                                                                                                                                                                                                                                                   |
 | 10  | Disclaimer          | Clickwrap from §10. Two unchecked checkboxes; button disabled until both checked. Store `disclaimerVersion` + timestamp in state. **No PDF is built until this is accepted.** If a resumed draft has an older `disclaimerVersion`, show it again.                                                                                                                                             |
 | 11  | Review              | HTML summary grouped by step with "Edit" links; missing-required list (§6.3); warnings list; "Preview PDF" (opens blob URL in new tab). Builds an **unsigned preview** PDF on entering, with a light "PREVIEW, NOT SIGNED" header on each form page.                                                                                                                                          |
-| 12  | Read and sign       | Page 2 statements verbatim, "I have read the statements above" checkbox, the form's attestation sentence verbatim directly above the signature pad, date (defaults to today, editable). Kept separate from the disclaimer: this screen is the State's text only.                                                                                                                              |
+| 12  | Read and sign       | Page 2 statements verbatim, "I have read the statements above" checkbox, the form's attestation sentence verbatim directly above the signature pad, date (set to today on every visit, editable while there; never persisted, §9.2). Kept separate from the disclaimer: this screen is the State's text only.                                                                                                                              |
 | 13  | Send                | Builds the **final signed** PDF on entering (no preview header) and keeps it in memory; tiered send (§8.6). DOB address shown large with Copy button. Plain "Download PDF" always visible. Send disabled while §6.3 hard requirements are missing.                                                                                                                                            |
 | 14  | Confirmation        | "Check your Sent folder." DOB phone numbers for follow-up. "I've sent it" → offers erase dialog. Shared-computer erase section (§9.3). "Something not working? Let us know" link (§19.5).                                                                                                                                                                                                     |
 
@@ -516,6 +529,15 @@ When `formUpdatePending` is `true` (§12), show a dismissible notice on the
 Welcome and Send steps: "The State recently updated this form. We're updating
 this tool; for now your complaint will use the previous version of the form."
 Hidden when `false`.
+
+**Progress** ("Step n of N") is computed from the step registry: each entry has
+`inProgress`, false for Welcome and Confirmation, so they are not counted.
+
+**Fixed-format inputs stay within the form's boxes:** State is two letters
+(`maxlength=2`, uppercased, non-letters dropped); Zip is five digits
+(`type="text"` so leading zeros survive, `inputmode="numeric"`, `maxlength=5`,
+a pasted ZIP+4 keeps its first five digits). Their empty-field warning omits
+the "type 'Unknown'" suggestion, as do dates, money, and choices.
 
 **Native inputs only:** `<input type="date">`, `inputmode="decimal"` for money,
 `type="tel"`, `type="email"`, `autocomplete` attributes on name/address/phone/email,
@@ -528,9 +550,12 @@ native radios/checkboxes, `<input type="file">`, `<dialog>`.
 **Runtime assets for the PDF (the template) are loaded as modules, never with
 `fetch`; a test verifies no `fetch()` calls to our own origin.** CSP
 `connect-src` is `'none'` or the telemetry origin only (§11), so a same-origin
-fetch would be blocked. The loader (a lazily imported chunk that imports the
-template with Vite `?inline` and decodes it in memory) and that test are built in
-Phase 3. Core PDF code takes bytes (`PdfAssets`) and never loads anything itself.
+fetch would be blocked. `template/loader.ts` imports the template with Vite
+`?inline` and decodes the base64 in memory (in dev it also checks
+`template.sha256`); `assets.ts` loads it lazily, and `preview.ts` keeps pdf-lib
+out of the main bundle. `tests/unit/no-fetch.test.ts` stubs `fetch`/XHR while
+loading and building packets, and scans `src/` for network APIs (only
+`core/telemetry/` may use them). Core PDF code takes bytes (`PdfAssets`) and never loads anything itself.
 Fonts need no loading: the PDF uses pdf-lib's built-in standard fonts (§8.2).
 
 ### 8.1 Packet order
@@ -559,12 +584,16 @@ All added pages are US Letter (612 × 792 pt), 0.5in margins, Helvetica, black.
 - `sanitize()` (`core/pdf/text.ts`) normalizes input with
   `String.prototype.normalize("NFC")`, turns tabs and control characters into
   spaces, and replaces every character WinAnsi can't encode (e.g. `ł`, `ő`,
-  Greek, Cyrillic, CJK, emoji) with `?`, logging a warning in dev. It returns the
-  replaced characters; the packet result lists them per field as
-  `unsupportedChars: { path, label, chars }[]`.
-- Phase 3: those characters get an inline message on the field as the user
-  types, e.g. "The form can't print 'ł'. Please use a plain letter instead.", so
-  nothing prints as `?` without the user knowing. The app never substitutes a
+  Greek, Cyrillic, CJK, emoji) with `?`. It returns the replaced characters; the
+  packet result lists them per field as `unsupportedChars: { path, label, chars }[]`
+  (and logs one warning per build in dev).
+- The same per-field check runs as the user types: `collectUnsupportedChars(state,
+  WIN_ANSI)` (`values.ts`) goes through the same `textValue` → `sanitize()` path as
+  `fillForm`. `WIN_ANSI` is a static copy of Helvetica's charset (a test compares it
+  with pdf-lib), so no pdf-lib is loaded. Each field shows e.g. "The form can't
+  print 'ł'. Please use a plain letter instead." (linked by `aria-describedby`); a
+  separate hidden live region announces it only when the set of characters
+  changes. Review lists the same entries as warnings. The app never substitutes a
   letter itself.
 
 ### 8.3 Overflow
@@ -715,6 +744,9 @@ interface DraftStore {
   must be re-added (show a notice listing empty slots).
 - **Device mode:** IndexedDB stores text state + compressed image/PDF blobs.
 - **Never persist the signature** in either mode; it is re-drawn at the end.
+  Likewise `signature.signedDate` and `signature.statementsRead` are never
+  persisted: the date resets to today on each visit to Read and sign, and the
+  statements are re-acknowledged.
 - **30-day expiry:** on load, if `meta.savedAt` (updated on every save) is older
   than 30 days, clear and start fresh (show a short notice).
 - One message for every browser, no browser detection. Next to the "Saved on this
@@ -1175,6 +1207,8 @@ Work phase by phase. Stop at the end of each phase and report to the maintainer.
    Output sample PDFs for visual review.
 3. **Wizard + state.** Steps 0–12 except uploads/signature, validation (Send-time
    gating), disclaimer placement, i18n strings, tokens/CSS.
+   - **Phase 3b: question flow redesign.** One question per page, chapters, and
+     the question pattern. Details will come in the Phase 3b plan.
 4. **Uploads + signature.** Image pipeline incl. grayscale toggle, PDF import,
    slots incl. "Other documents", size meter, signature pad.
 5. **Send + storage + erase.** Tiered send, `.eml`, draftStore both backends,
@@ -1205,7 +1239,11 @@ Work phase by phase. Stop at the end of each phase and report to the maintainer.
   and 1-800-831-7225) and update `config.ts`; give a heads-up about
   app-originated emails; ask how long DOB keeps accepting the previous form
   revision after publishing a new one; mention the domain.
-- Attorney / legal aid review of the disclaimer, Terms, and Privacy text.
+- Attorney / legal aid review of the disclaimer, Terms, and Privacy text; the
+  two neutral definitions shown in the wizard ("Cash for Keys: an offer from a
+  landlord to pay a tenant to move out"; "Periodic rent: your regular rent
+  payment (for most people, monthly rent)"); and the complaint-type question
+  flow (coming in Phase 3b).
 - Finalize app name (consider wording that doesn't imply guaranteed recovery).
   Do this before the attorney review, since the name appears in the disclaimer.
   Renaming = change `app.name` in `i18n/en.json`.

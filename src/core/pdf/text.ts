@@ -16,6 +16,24 @@ export function charsetOf(font: { getCharacterSet(): number[] }): Charset {
   return new Set(font.getCharacterSet());
 }
 
+// Code points WinAnsi maps into 0x80–0x9F (€ ‚ ƒ „ … † ‡ ˆ ‰ Š ‹ Œ Ž ‘ ’ “ ” • – — ˜ ™ š › œ ž Ÿ).
+const WIN_ANSI_EXTRAS = [
+  0x20ac, 0x201a, 0x0192, 0x201e, 0x2026, 0x2020, 0x2021, 0x02c6, 0x2030, 0x0160, 0x2039, 0x0152,
+  0x017d, 0x2018, 0x2019, 0x201c, 0x201d, 0x2022, 0x2013, 0x2014, 0x02dc, 0x2122, 0x0161, 0x203a,
+  0x0153, 0x017e, 0x0178,
+];
+
+/**
+ * What pdf-lib's standard fonts (Helvetica, WinAnsi) can encode, without
+ * loading pdf-lib: printable ASCII, Latin-1, and the WinAnsi extras. A test
+ * checks it against `charsetOf(Helvetica)`. Used to warn as the user types.
+ */
+export const WIN_ANSI: Charset = new Set<number>([
+  ...Array.from({ length: 0x7f - 0x20 }, (_, i) => 0x20 + i),
+  ...Array.from({ length: 0x100 - 0xa0 }, (_, i) => 0xa0 + i),
+  ...WIN_ANSI_EXTRAS,
+]);
+
 export interface SanitizeResult {
   text: string;
   /** Characters the font can't encode, replaced with "?"; each listed once, in order of first appearance. */
@@ -44,9 +62,6 @@ export function sanitize(input: string, charset: Charset): SanitizeResult {
       text += REPLACEMENT;
       if (!replaced.includes(char)) replaced.push(char);
     }
-  }
-  if (replaced.length > 0 && import.meta.env?.DEV) {
-    console.warn(`Replaced characters the PDF font can't encode: ${replaced.join(' ')}`);
   }
   return { text, replaced };
 }
