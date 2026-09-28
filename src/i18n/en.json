@@ -1,5 +1,34 @@
 {
   "app": {
     "name": "Security Deposit Helper (working name)"
+  },
+  "pdf": {
+    "documentTitle": "Security Deposit Complaint Form",
+    "seeContinuation": "See continuation page",
+    "seeContinuationShort": "See p. {page}",
+    "continuationTitle": "Continuation of Security Deposit Complaint Form",
+    "continuationGroups": {
+      "tenant": "Tenant",
+      "landlord": "Landlord",
+      "rental": "Rental information"
+    },
+    "indexTitle": "Supporting Documents",
+    "indexColumns": {
+      "number": "Attachment",
+      "label": "Document",
+      "files": "Files",
+      "pages": "Pages"
+    },
+    "indexEmpty": "No documents are attached.",
+    "exhibitHeader": "{tenantName} · Security Deposit Complaint · Attachment {number} of {total}: {label} · page {page} of {pages}",
+    "previewLabel": "PREVIEW, NOT SIGNED",
+    "filenamePrefix": "CT-Security-Deposit-Complaint"
+  },
+  "slots": {
+    "cashForKeysAgreement": "Copy of the Cash for Keys agreement",
+    "other": "Other documents (optional)",
+    "otherHelp": "Anything else you want the Department to see.",
+    "correspondenceHint": "include the envelope",
+    "proofOfAgeNote": "The form says the Department may share your documents with your landlord. You may cover information you don't want shared."
   }
 }

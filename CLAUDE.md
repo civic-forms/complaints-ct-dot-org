@@ -3,7 +3,7 @@
 > **App name is undecided** (chosen closer to launch). In UI copy and legal text
 > it appears as `{appName}`, filled from `i18n/en.json` → `app.name`. Until then
 > `app.name` = "Security Deposit Helper (working name)". Never hard-code the
-> name anywhere else. Operator: **[Operator Name]**. Repo: **[repo URL]**.
+> name anywhere else. Operator: **[Operator Name]**. Repo: **https://github.com/civic-forms/complaints-ct-dot-org**.
 > Planned host: a subdomain of `complaintsct.org` (e.g. `deposits.complaintsct.org`
 > or `housing.complaintsct.org/security-deposits` — base path is configurable).
 
@@ -121,8 +121,8 @@ information in general.
 | Build             | Vite                                                                                                                         |
 | UI                | Preact (hooks; no router library — wizard step is state)                                                                     |
 | Styling           | Plain CSS with custom properties (design tokens). No CSS framework, no component library                                     |
-| PDF               | `pdf-lib` + `@pdf-lib/fontkit`                                                                                               |
-| Font              | Noto Sans (OFL), bundled locally, embedded with `subset: true`                                                               |
+| PDF               | `pdf-lib`                                                                                                                    |
+| Font              | PDF: pdf-lib standard fonts Helvetica / Helvetica-Bold (WinAnsi encoding); no font files are bundled or embedded (§8.2)      |
 | Signature         | Hand-written canvas component (Pointer Events) — no library                                                                  |
 | Image compression | Hand-written canvas pipeline — no library                                                                                    |
 | Lint/format       | Biome                                                                                                                        |
@@ -136,7 +136,7 @@ information in general.
 | CI                | GitHub Actions                                                                                                               |
 | License           | MIT                                                                                                                          |
 
-Runtime dependencies are limited to: `preact`, `pdf-lib`, `@pdf-lib/fontkit`.
+Runtime dependencies are limited to: `preact`, `pdf-lib`.
 Adding any other runtime dependency requires maintainer approval.
 
 ### 3.1 pnpm supply-chain settings
@@ -186,20 +186,21 @@ Edge. Accessibility target: **WCAG 2.1 AA**.
 ├─ vite.config.ts               (base path from env: VITE_BASE_PATH, default "/";
 │                                sourcemap true; injects VITE_APP_VERSION = short
 │                                git commit SHA)
-├─ public/
-│  └─ fonts/NotoSans-*.ttf
 ├─ scripts/
 │  ├─ dump-form-fields.ts       (Phase 1 / §5.3: AcroForm inventory; `pnpm form:dump [pdf]`)
 │  ├─ extract-form-text.ts      (Phase 1 / §5.3: verify verbatim.json; dev-only; `pnpm form:text [pdf]`)
+│  ├─ build-samples.ts          (Phase 2: sample packets from fixtures for visual review; `pnpm samples`)
 │  ├─ app-version.ts            (VITE_APP_VERSION resolution, used by vite.config.ts)
 │  ├─ lib/stable-json.ts        (sorted-key JSON so script output diffs cleanly)
-│  ├─ out/                      (gitignored script output: form-fields.json, form-text.json)
+│  ├─ out/                      (gitignored script output: form-fields.json, form-text.json, samples/)
 │  └─ gen-headers.ts            (post-build: writes dist/_headers with CSP, §11)
 ├─ src/
 │  ├─ main.tsx
 │  ├─ app/                      (app shell, wizard controller, step registry)
 │  ├─ core/                     (form-agnostic, reusable across future tools)
-│  │  ├─ pdf/                   (packet assembly, text fitting, exhibit pages, index page)
+│  │  ├─ pdf/                   (assemble.ts packet assembly; text.ts sanitize + fitting;
+│  │  │                          acroform.ts checkbox/text helpers; pages.ts continuation,
+│  │  │                          index, exhibit pages; budget.ts size budget; errors.ts)
 │  │  ├─ images/                (decode, orient, resize, compress)
 │  │  ├─ signature/             (canvas pad → trimmed PNG)
 │  │  ├─ send/                  (share sheet, mailto, .eml builder)
@@ -215,6 +216,8 @@ Edge. Accessibility target: **WCAG 2.1 AA**.
 │  │     │  └─ template.sha256
 │  │     ├─ schema.ts           (state types + initial state)
 │  │     ├─ fieldMap.ts         (schema path → AcroForm field OR coordinates)
+│  │     ├─ fill.ts             (state → form fields: formatting, §6.2 follow-ups, fitting)
+│  │     ├─ packet.ts           (buildComplaintPacket: preview/final, disclaimer gate, filename)
 │  │     ├─ verbatim.json       (exact form text shown in UI)
 │  │     ├─ checklist.ts        (derive evidence slots from state)
 │  │     ├─ validation.ts
@@ -227,7 +230,8 @@ Edge. Accessibility target: **WCAG 2.1 AA**.
 │     └─ base.css
 ├─ tests/
 │  ├─ unit/
-│  ├─ fixtures/                 (sample states, sample images/PDFs)
+│  ├─ fixtures/                 (fictional sample states, one synthetic JPEG)
+│  ├─ helpers/                  (template loader, synthetic PNG/PDF generators)
 │  └─ e2e/smoke.spec.ts
 └─ .github/
    ├─ workflows/ci.yml
@@ -255,7 +259,8 @@ refactoring.
   - Page 2: complaint types, the "read before signing" statements (text only, with
     no checkbox), attestation, signature, and date.
   - Page 3: documentation checklist. It **has** fillable checkboxes, one per
-    checklist line (see §5.2). Whether the app fills them is pending maintainer review.
+    checklist line (see §5.2). The app leaves them blank and includes page 3 as
+    printed; the attachment index page lists what's enclosed (maintainer decision).
 - The template is **committed to the repo** with its SHA-256. Never fetch it at
   runtime. At app start (dev builds) and in tests, verify the hash.
 
@@ -272,12 +277,13 @@ refactoring.
   leaving it blank.
 - Email is an accepted submission method per the form header.
 
-### 5.2 Form inventory (Phase 1 findings, **pending maintainer review**)
+### 5.2 Form inventory (reviewed by the maintainer)
 
 Taken from `pnpm form:dump`, `pnpm form:text`, and a rendered visual check of
 `sdcompform-rev-2026.pdf` (SHA-256 `dde91f83…d715`). The full per-field output
-(names, rects, export values) is regenerated into `scripts/out/`. `fieldMap.ts`
-is written in Phase 2, after review.
+(names, rects, export values) is regenerated into `scripts/out/`. The mapping
+lives in `fieldMap.ts`; `tests/unit/field-map.test.ts` checks that every
+template field is mapped or listed as intentionally blank.
 
 1. **AcroForm: yes.** It has 63 fields and no XFA. `NeedAppearances` is unset, and the
    default appearance is `/Helv 0 Tf` (auto-size). There are 3 pages, each 612 × 792 pt with no rotation.
@@ -294,10 +300,17 @@ is written in Phase 2, after review.
    - **Page 3:** 14 checkboxes, one per checklist line, in order:
      `Check Boxa/b/c` (all types), `d` (type 1), `h/i/j` and `Check Box1`
      (type 2; `Check Box1` is the fourth line, and its name is a typo in the PDF), `l/m/n` (type 3),
-     `p/q/t` (type 4).
-   - **Unexplained field:** `IfYes2`, a wide text field on the **correspondence** row.
-     The printed question asks only to "enclose a copy" and has no fill-in
-     instruction, and the schema has no follow-up for it. The proposal is to leave it blank.
+     `p/q/t` (type 4). **Decision: left blank**, page 3 included as printed. Ticking
+     them would state on the State's form that required documents are enclosed,
+     which the app can't verify; the attachment index page lists what is enclosed.
+   - **`IfYes2`**, a wide text field on the **correspondence** row. The printed
+     question asks only to "enclose a copy" and has no fill-in instruction.
+     **Decision: left blank.** `fieldMap.ts` lists it and the page 3 boxes in
+     `INTENTIONALLY_BLANK`.
+   - **Question → field:** interest `Check Box8` (+`IfYes`), correspondence
+     `Check Box9`, deposit returned `Check Box10` (+`Yes Amount`), check cashed
+     `Check Box15`, court action `Check Box11`, roommates `Check Box12`, other
+     properties `Check Box14`.
 2. **NOT SURE** is on **Cash for Keys**. It uses three *independent* checkboxes:
    `Check Box13a` = YES, `13b` = NO, `13c` = NOT SURE. The app keeps them
    mutually exclusive.
@@ -307,8 +320,10 @@ is written in Phase 2, after review.
 4. **Not in the AcroForm:** **signature and date on page 2** are printed
    underscores, so they are drawn by coordinates. The printed line's baseline is y ≈ 171. The signature
    underscores run from x ≈ 93 to 307, and the date underscores from x ≈ 333 to 456. The clear space
-   above the line is up to the attestation line at y ≈ 207. Confirm exact values against sample output in
-   Phase 2.
+   above the line is up to the attestation line at y ≈ 207. Confirmed against Phase 2 sample output
+   (`SIGNATURE_BOX` / `SIGNED_DATE` in `fieldMap.ts`): the signature image is scaled to fit
+   x 94–306, y 169–204, bottom-left aligned on the line; the date is drawn at x 338, baseline y 173,
+   10pt.
 
 Also noted on the form: its header says "Dates should be in MM/DD/YY format"
 (consistent with §5.1), and it asks to "Complete both pages" although it has 3 pages.
@@ -421,7 +436,9 @@ Rental `state` defaults to `"CT"`.
 
 If an answer changes from YES to NO, **keep** follow-up values in state (in case
 they switch back) but **do not render** them on the PDF and do not require their
-evidence slots.
+evidence slots. "Has the check been cashed?" is a follow-up of "Has any part of
+your security deposit been returned?" (§7 step 6): its box is rendered only when
+that answer is YES.
 
 ### 6.3 Validation
 
@@ -508,19 +525,30 @@ native radios/checkboxes, `<input type="file">`, `<dialog>`.
 
 ## 8. PDF packet
 
+**Runtime assets for the PDF (the template) are loaded as modules, never with
+`fetch`; a test verifies no `fetch()` calls to our own origin.** CSP
+`connect-src` is `'none'` or the telemetry origin only (§11), so a same-origin
+fetch would be blocked. The loader (a lazily imported chunk that imports the
+template with Vite `?inline` and decodes it in memory) and that test are built in
+Phase 3. Core PDF code takes bytes (`PdfAssets`) and never loads anything itself.
+Fonts need no loading: the PDF uses pdf-lib's built-in standard fonts (§8.2).
+
 ### 8.1 Packet order
 
 1. Form pages 1–3 (filled, flattened).
 2. Continuation page(s), only if any text overflowed (§8.3).
-3. Attachment index page.
+3. Attachment index page, always included (with no uploads it says "No
+   documents are attached.", so DOB can see nothing was left out by mistake).
 4. Exhibit pages, grouped by checklist slot in checklist order.
 
-All added pages are US Letter (612 × 792 pt), 0.5in margins, Noto Sans, black.
+All added pages are US Letter (612 × 792 pt), 0.5in margins, Helvetica, black.
 
 ### 8.2 Filling the form
 
-- If AcroForm: fill by field name from `fieldMap.ts`, set text via embedded Noto
-  Sans, `form.updateFieldAppearances(font)`, then `form.flatten()`.
+- Fonts: pdf-lib's standard fonts, Helvetica and Helvetica-Bold, with WinAnsi
+  encoding (Western European Latin). Nothing is bundled or embedded.
+- If AcroForm: fill by field name from `fieldMap.ts`, set text in Helvetica at
+  the fitted size (§8.3), `form.updateFieldAppearances(font)`, then `form.flatten()`.
 - If not (or for fields missing from the AcroForm): draw text at
   `{ page, x, y, maxWidth, maxHeight? }` from `fieldMap.ts`.
 - Checkboxes on a flat PDF: draw an "X" centered in the box rect.
@@ -528,9 +556,16 @@ All added pages are US Letter (612 × 792 pt), 0.5in margins, Noto Sans, black.
   `(860) 555-0123` when 10 digits, otherwise as typed.
 - Multi-value fields: interest payments render as `MM/DD/YY – $X.XX; …`;
   roommate names and property addresses joined with `; `.
-- Characters the embedded font can't encode: replace with `?` and log a
-  warning in dev (Noto Sans covers Latin/Greek/Cyrillic; emoji will be replaced).
-  Normalize input with `String.prototype.normalize("NFC")`.
+- `sanitize()` (`core/pdf/text.ts`) normalizes input with
+  `String.prototype.normalize("NFC")`, turns tabs and control characters into
+  spaces, and replaces every character WinAnsi can't encode (e.g. `ł`, `ő`,
+  Greek, Cyrillic, CJK, emoji) with `?`, logging a warning in dev. It returns the
+  replaced characters; the packet result lists them per field as
+  `unsupportedChars: { path, label, chars }[]`.
+- Phase 3: those characters get an inline message on the field as the user
+  types, e.g. "The form can't print 'ł'. Please use a plain letter instead.", so
+  nothing prints as `?` without the user knowing. The app never substitutes a
+  letter itself.
 
 ### 8.3 Overflow
 
@@ -540,6 +575,13 @@ write `See continuation page` in the field and put the full text on a
 continuation page titled "Continuation of Security Deposit Complaint Form",
 with the tenant name and each overflowed field's form label as a subheading.
 Additional Comments is the most likely overflow; test with 3,000+ characters.
+
+Details as built: fitting steps down by 0.5pt and uses the same inner box and
+multiline line height as pdf-lib's appearance generator, pre-wrapping multiline
+text so pdf-lib doesn't re-wrap it. Where `See continuation page` itself doesn't
+fit (the narrow State and Zip boxes), the field gets `See p. 4` (the
+continuation page's number). Repeated labels get their section on the
+continuation page ("Tenant: State").
 
 ### 8.4 Evidence slots (`checklist.ts`)
 
@@ -872,7 +914,8 @@ How each group is used:
 Phase 1 checked every string against the template with `pnpm form:text`: 69
 exact matches, plus "Month-To-Month", which matches once spaces are ignored because the PDF
 letter-spaces it. One correction was made: `complaintIntro` now includes the
-form's full sentence, with its "(see the checklist on page 3 …)" parenthetical.
+form's full sentence, with its "(see the checklist on page 3 …)" parenthetical,
+kept exactly as printed, including its repetition (confirmed by the maintainer).
 The JSON below mirrors `src/forms/ct-dob-security-deposit/verbatim.json`.
 Keep them in sync.
 
@@ -1114,6 +1157,13 @@ version-update PRs); security updates are enabled in repo settings.
 ## 17. Build phases
 
 Work phase by phase. Stop at the end of each phase and report to the maintainer.
+
+**Branch and PR workflow (every phase):**
+
+- Create a branch named `phase-N-<short-name>` from the latest `main`.
+- When the phase is done, push that branch and open a PR into `main` with the
+  phase report as the description, then stop.
+- Never push to `main` and never merge. The maintainer reviews and squash-merges.
 
 1. **Scaffold + form inventory.** pnpm (with §3.1 settings)/Vite/Preact/TS/Biome/Vitest set up. Commit the
    template + hash. Run `scripts/dump-form-fields.ts` (field names, types, pages,
