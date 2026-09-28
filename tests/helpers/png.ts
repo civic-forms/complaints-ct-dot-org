@@ -58,3 +58,38 @@ export function signaturePng(width = 480, height = 120): Uint8Array {
 export function pngDataUrl(bytes: Uint8Array): string {
   return `data:image/png;base64,${Buffer.from(bytes).toString('base64')}`;
 }
+
+/**
+ * An opaque, colorful "photo" (sky, ground, sun, a house) for the color
+ * "Other documents" slot. Clearly not a document or a signature.
+ */
+export function photoPng(width = 1600, height = 1000): Uint8Array {
+  const rgba = new Uint8Array(width * height * 4);
+  const horizon = height * 0.62;
+  const sun = { x: width * 0.78, y: height * 0.22, r: height * 0.1 };
+  const house = { x0: width * 0.2, x1: width * 0.45, y0: height * 0.4, y1: horizon };
+  for (let y = 0; y < height; y++) {
+    for (let x = 0; x < width; x++) {
+      let color: [number, number, number];
+      const roofTop = house.y0 - (house.x1 - house.x0) / 2;
+      const roofHalf = ((y - roofTop) / (house.y0 - roofTop)) * ((house.x1 - house.x0) / 2);
+      const mid = (house.x0 + house.x1) / 2;
+      if ((x - sun.x) ** 2 + (y - sun.y) ** 2 < sun.r ** 2) {
+        color = [250, 200, 40];
+      } else if (x > house.x0 && x < house.x1 && y > house.y0 && y < house.y1) {
+        const door = x > mid - 30 && x < mid + 30 && y > house.y1 - 120;
+        color = door ? [110, 60, 30] : [200, 70, 60];
+      } else if (y > roofTop && y <= house.y0 && Math.abs(x - mid) < roofHalf) {
+        color = [90, 50, 40];
+      } else if (y < horizon) {
+        const t = y / horizon;
+        color = [Math.round(90 + 90 * t), Math.round(150 + 60 * t), 235];
+      } else {
+        const t = (y - horizon) / (height - horizon);
+        color = [Math.round(60 - 20 * t), Math.round(150 - 50 * t), Math.round(60 - 20 * t)];
+      }
+      rgba.set([...color, 255], (y * width + x) * 4);
+    }
+  }
+  return encodePng(width, height, rgba);
+}

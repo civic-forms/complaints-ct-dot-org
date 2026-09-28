@@ -15,7 +15,7 @@ import {
 import { FIXTURES } from '../tests/fixtures/states.ts';
 import { loadAssets, read } from '../tests/helpers/assets.ts';
 import { sampleAttachmentPdf } from '../tests/helpers/pdfs.ts';
-import { pngDataUrl, signaturePng } from '../tests/helpers/png.ts';
+import { photoPng, pngDataUrl, signaturePng } from '../tests/helpers/png.ts';
 
 const OUT_DIR = join(import.meta.dirname, 'out/samples');
 
@@ -34,7 +34,7 @@ async function main() {
     proofOfAge: [receipt],
     certifiedMailReceipt: [receipt],
     cashForKeysAgreement: [letters],
-    other: [{ kind: 'image', mime: 'image/png', bytes: signaturePng(1600, 900) }],
+    other: [{ kind: 'image', mime: 'image/png', bytes: photoPng() }],
   };
 
   mkdirSync(OUT_DIR, { recursive: true });
