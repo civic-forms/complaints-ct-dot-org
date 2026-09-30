@@ -21,8 +21,6 @@ export interface StepProps {
   warnings: readonly Issue[];
   /** The "answer to continue" error's element id while it's shown, for aria-describedby. */
   pageError: string | null;
-  /** Unanswered pages an edit revealed (the Review edit detour interstitial). */
-  detourCount: number;
 }
 
 export interface PageDef extends PageSpec {

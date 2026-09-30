@@ -1,5 +1,5 @@
-// Your situation (CLAUDE.md §7): moved out, then for current tenants the age,
-// over-limit and bank gates and their confirmations. Gate answers are app-only
+// Your situation (CLAUDE.md §7): moved out, then for current tenants the age
+// and over-limit gates and the confirmations. Gate answers are app-only
 // and never print; only a confirmation's Yes checks a type on the form.
 
 import type { ComponentChildren } from 'preact';
@@ -48,9 +48,6 @@ export const OverLimitHeld = gateQuestion(
   (s) => (s.gates.age62OrOlder === 'yes' ? p.overLimitHeld62 : p.overLimitHeldUnder62),
   { notSure: true },
 );
-export const BankInfoGiven = gateQuestion('bankInfoGiven', () => p.bankInfoGiven, {
-  notSure: true,
-});
 
 /** No type confirmed: the form's own list, and legal help. Send stays disabled (§6.3). */
 export function NoTypeNote() {

@@ -28,7 +28,6 @@ export const STEP_IDS = [
   'situation.overLimitHeld',
   'situation.confirm.currentTenant62PlusExcessOverOneMonth',
   'situation.confirm.currentTenantUnder62ExcessOverTwoMonths',
-  'situation.bankInfoGiven',
   'situation.confirm.currentTenantNoEscrowInfo',
   'situation.noTypeNote',
 

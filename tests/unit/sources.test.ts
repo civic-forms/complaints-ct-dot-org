@@ -35,33 +35,31 @@ function* paths(): Generator<DepositComplaintState> {
   for (const movedOut of yn)
     for (const age62OrOlder of yn)
       for (const overLimitHeld of yns)
-        for (const bankInfoGiven of yns)
-          for (const returned of yn)
-            for (const fullAmountReturned of yns)
-              for (const confirm of yn)
-                for (const fwd of yn)
-                  for (const others of yn)
-                    yield start({
-                      gates: {
-                        movedOut,
-                        age62OrOlder,
-                        overLimitHeld,
-                        bankInfoGiven,
-                        fullAmountReturned,
-                        otherDepositPaid: others,
-                        confirmed: Object.fromEntries(COMPLAINT_TYPES.map((t) => [t, confirm])),
-                      },
-                      fwd: { fwdGiven: fwd, fwdInWriting: fwd, fwdProofAvailable: fwd },
-                      questions: {
-                        depositReturned: { answer: returned },
-                        interestPaid: { answer: others },
-                        roommates: { answer: others },
-                        landlordOtherProperties: { answer: others },
-                        correspondenceReceived: { answer: others },
-                        courtAction: { answer: others },
-                        cashForKeys: { answer: others },
-                      },
-                    });
+        for (const returned of yn)
+          for (const fullAmountReturned of yns)
+            for (const confirm of yn)
+              for (const fwd of yn)
+                for (const others of yn)
+                  yield start({
+                    gates: {
+                      movedOut,
+                      age62OrOlder,
+                      overLimitHeld,
+                      fullAmountReturned,
+                      otherDepositPaid: others,
+                      confirmed: Object.fromEntries(COMPLAINT_TYPES.map((t) => [t, confirm])),
+                    },
+                    fwd: { fwdGiven: fwd, fwdInWriting: fwd, fwdProofAvailable: fwd },
+                    questions: {
+                      depositReturned: { answer: returned },
+                      interestPaid: { answer: others },
+                      roommates: { answer: others },
+                      landlordOtherProperties: { answer: others },
+                      correspondenceReceived: { answer: others },
+                      courtAction: { answer: others },
+                      cashForKeys: { answer: others },
+                    },
+                  });
 }
 
 describe('one source question per form field', () => {
@@ -92,7 +90,6 @@ function writerOf(path: string): StepId | undefined {
     'gates.movedOut': 'situation.movedOut',
     'gates.age62OrOlder': 'situation.age62OrOlder',
     'gates.overLimitHeld': 'situation.overLimitHeld',
-    'gates.bankInfoGiven': 'situation.bankInfoGiven',
     'gates.fullAmountReturned': 'deposit.fullAmountReturned',
     'gates.otherDepositPaid': 'deposit.otherDepositPaid',
     'forwardingAddress.fwdGiven': 'newAddress.fwdGiven',

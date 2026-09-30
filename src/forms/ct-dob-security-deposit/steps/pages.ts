@@ -155,13 +155,6 @@ export const PAGE_SPECS: readonly PageSpec[] = [
     'situation',
     'currentTenantUnder62ExcessOverTwoMonths',
   ),
-  {
-    id: 'situation.bankInfoGiven',
-    chapter: 'situation',
-    kind: 'page',
-    when: stillThere,
-    answer: appChoice((s) => answered(s.gates.bankInfoGiven)),
-  },
   confirmPage(
     'situation.confirm.currentTenantNoEscrowInfo',
     'situation',

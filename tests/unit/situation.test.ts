@@ -69,7 +69,6 @@ describe('reaching and checking a complaint type', () => {
         movedOut: 'no',
         age62OrOlder: 'no',
         overLimitHeld: 'not_sure',
-        bankInfoGiven: 'not_sure',
       },
     });
     expect(isReachable(s, UNDER_62)).toBe(true);
@@ -80,13 +79,22 @@ describe('reaching and checking a complaint type', () => {
 
   it('still leads to the escrow path after Not sure on over-limit', () => {
     const s = start({ gates: { movedOut: 'no', age62OrOlder: 'yes', overLimitHeld: 'not_sure' } });
-    expect(relevant(s, 'situation.bankInfoGiven')).toBe(true);
     expect(relevant(s, 'situation.confirm.currentTenantNoEscrowInfo')).toBe(true);
+  });
+
+  it('shows every current tenant the escrow confirmation, whatever the other answers', () => {
+    for (const age62OrOlder of ['yes', 'no'] as const) {
+      for (const overLimitHeld of ['yes', 'no', 'not_sure'] as const) {
+        const s = start({ gates: { movedOut: 'no', age62OrOlder, overLimitHeld } });
+        expect(relevant(s, 'situation.confirm.currentTenantNoEscrowInfo')).toBe(true);
+      }
+    }
+    expect(isReachable(start({ gates: { movedOut: 'yes' } }), ESCROW)).toBe(false);
   });
 
   it('leaves the type unchecked on No at the confirmation', () => {
     const s = start({
-      gates: { movedOut: 'no', bankInfoGiven: 'no', confirmed: { [ESCROW]: 'no' } },
+      gates: { movedOut: 'no', confirmed: { [ESCROW]: 'no' } },
     });
     expect(isReachable(s, ESCROW)).toBe(true);
     expect(checked(s)).toEqual([]);
@@ -95,10 +103,10 @@ describe('reaching and checking a complaint type', () => {
 
   it("unchecks a type when an earlier answer changes, including the form's depositReturned", () => {
     const s = start({
-      gates: { movedOut: 'no', bankInfoGiven: 'no', confirmed: { [ESCROW]: 'yes' } },
+      gates: { movedOut: 'no', confirmed: { [ESCROW]: 'yes' } },
     });
     expect(checked(s)).toEqual([ESCROW]);
-    expect(checked(answer(s, { gates: { bankInfoGiven: 'yes' } }))).toEqual([]);
+    expect(checked(answer(s, { gates: { movedOut: 'yes' } }))).toEqual([]);
 
     const former = start({
       gates: { movedOut: 'yes', fullAmountReturned: 'yes', confirmed: { [FORMER]: 'yes' } },

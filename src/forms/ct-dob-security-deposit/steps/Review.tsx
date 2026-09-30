@@ -9,7 +9,6 @@ import { useEffect, useState } from 'preact/hooks';
 import { createObjectUrl, revokeObjectUrl } from '../../../core/blob-urls.ts';
 import { todayIso } from '../../../core/format/date.ts';
 import en from '../../../i18n/en.json' with { type: 'json' };
-import { t } from '../../../i18n/t.ts';
 import { isDisclaimerAccepted } from '../disclaimer.ts';
 import type { TextPath } from '../fieldMap.ts';
 import { COMPLAINT_TYPES, type DepositComplaintState, type YesNoNotSure } from '../schema.ts';
@@ -338,11 +337,6 @@ export function Review({ state, goTo, unsupported }: StepProps) {
 }
 
 /** The edit detour's interstitial: names the change, never what the answers mean. */
-export function MoreInfoNeeded({ detourCount }: StepProps) {
-  const p = en.pages;
-  return (
-    <p class="lead">
-      {detourCount === 1 ? p.moreInfoNeededOne : t(p.moreInfoNeededOther, { n: detourCount })}
-    </p>
-  );
+export function MoreInfoNeeded() {
+  return <p class="lead">{en.pages.moreInfoNeeded}</p>;
 }

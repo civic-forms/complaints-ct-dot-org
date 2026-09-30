@@ -230,7 +230,8 @@ Edge. Accessibility target: **WCAG 2.1 AA**.
 │  │     ├─ checklist.ts        (derive evidence slots from state)
 │  │     ├─ situation.ts        (complaint-type gates: isReachable / isChecked / normalizeGates, §6.1)
 │  │     ├─ validation.ts       (missingRequired / canSend / softWarnings, §6.3)
-│  │     ├─ ct-towns.json       (Connecticut's 169 towns: rental City/Town suggestions)
+│  │     ├─ ct-towns.json       (Connecticut's 169 towns: rental City/Town suggestions; source:
+│  │     │                       https://portal.ct.gov/Government/Cities-and-Towns)
 │  │     ├─ steps/              (ids.ts chapter + page ids; pages.ts UI-free registry: relevance,
 │  │     │                       answer rules, fills; index.ts adds titles + components; one file
 │  │     │                       per chapter; shared.tsx: intros, FormText, LegalHelp, ConfirmType,
@@ -266,7 +267,7 @@ boundary clean.
   `isChecked(state, type)`. Form positions ("box 1", `Check1`–`Check4`) appear
   only in `fieldMap.ts` and as cross-references in this file. A test enforces it.
 - Answer fields are named as states (past participles or adjectives):
-  `movedOut`, `bankInfoGiven`, `fwdGiven`.
+  `movedOut`, `overLimitHeld`, `fwdGiven`.
 - Page ids are `chapter.page` and name what the page holds (`deposit.neededDocs`,
   `newAddress.forwardingAddressSlot`).
 
@@ -458,7 +459,6 @@ interface DepositComplaintState {
     movedOut: YesNo;
     age62OrOlder: YesNo;
     overLimitHeld: YesNoNotSure;
-    bankInfoGiven: YesNoNotSure;
     fullAmountReturned: YesNoNotSure;
     otherDepositPaid: YesNo; // No prints $0.00 in "Amount of any Other Deposit"
     confirmed: Record<ComplaintType, YesNo>; // "Does this describe your situation?"
@@ -488,7 +488,7 @@ it is reachable and its confirmation is Yes.
 | `formerTenantDepositNotReturned` (1)          | movedOut yes, and not (the form's depositReturned YES and fullAmountReturned yes)        |
 | `currentTenant62PlusExcessOverOneMonth` (2)   | movedOut no, age62OrOlder yes, overLimitHeld not no                                      |
 | `currentTenantUnder62ExcessOverTwoMonths` (3) | movedOut no, age62OrOlder no, overLimitHeld not no                                       |
-| `currentTenantNoEscrowInfo` (4)               | movedOut no, bankInfoGiven not yes                                                       |
+| `currentTenantNoEscrowInfo` (4)               | movedOut no (every current tenant sees the confirmation)                                 |
 
 `normalizeGates()` runs after every update: it clears `confirmed[type]` for any
 type that is no longer reachable, then derives `complaintTypes`. The PDF,
@@ -575,8 +575,7 @@ Questions may be asked in any order; every form field still has exactly one
 source question, questions that gate pages come before the pages they gate, and
 the app never infers a claim from entered numbers (§2.2).
 
-As built: "Not sure" on a gate (over-limit, bank name and address, full amount
-returned) shows the legal help links and still leads to the confirmation.
+As built: "Not sure" on a gate (over-limit, full amount returned) shows the legal help links and still leads to the confirmation.
 Confirmations are Yes/No only, with the legal help links on the page; No leaves
 the type unchecked. Fact questions (moved out, 62 or older) are Yes/No only.
 Tests check that every printed field is in the `fills` of exactly one page that
@@ -589,8 +588,8 @@ or skip for now"), linked from the page's inputs with `aria-describedby`, and
 focus moves to it.
 
 - App-added choice questions require a selection. "Not sure" is offered only
-  where a user could genuinely not know (over-limit, bank name and address, full
-  amount returned, in writing, proof). Obvious personal facts (moved out, 62 or
+  where a user could genuinely not know (over-limit, full amount returned, in
+  writing, proof). Obvious personal facts (moved out, 62 or
   older, other deposit paid, gave new address) and confirmations are Yes/No.
 - The form's printed YES/NO questions offer exactly the form's options (NOT
   SURE only on Cash for Keys) plus a secondary "Skip for now" link. Skipped means
@@ -629,7 +628,7 @@ step enum, §19.3). Pages in *italics* appear only when the condition holds.
 | Chapter             | Pages                                                                                                                                                                                                                                                                                                                                                                     |
 | ------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | Welcome             | What the tool does, time estimate. **Short non-blocking notice:** "Not legal advice. Not a government website. We count anonymous usage to improve the tool; we never collect what you type or upload." with link to Privacy. Device choice as the two start buttons (§9.1). Link to DOB's page for the official Spanish form (fires `spanish_form_link_clicked`). Links to legal help (§12). |
-| Your situation      | Intro; moved out? *Current tenants:* 62 or older?; over-limit (one month's rent for 62+, two months' under 62); confirm type 2 or 3; bank name and address given?; confirm type 4; *no type checked:* "The form asks you to check at least one of these." with the four types verbatim and legal help.                                                                        |
+| Your situation      | Intro; moved out? *Current tenants:* 62 or older?; over-limit (one month's rent for 62+, two months' under 62); confirm type 2 or 3; confirm type 4 (no gate: every current tenant decides there); *no type checked:* "The form asks you to check at least one of these." with the four types verbatim and legal help.                                                                        |
 | Your deposit        | Intro; monthly rent; security deposit; other deposit paid? (*Yes:* amount); the form's "any part returned?" (*YES:* amount, check cashed, *former tenants:* was it the full amount?); *former tenants:* confirm type 1, *no type checked* note; interest paid? (*YES:* date/amount rows); What you'll need (derived checklist, §8.4; never blocks).                              |
 | Your new address    | *Type 1 checked:* intro; gave landlord your new address?; *Yes:* in writing?; *Yes:* copy or proof you sent it?; *Yes:* the forwarding-address upload slot. No or Not sure at any step shows the whole forwarding-address note verbatim, marked "From the official form:", and ends the chapter.                                                                            |
 | About you           | Intro; name; current address (street, city, state, zip); daytime phone; email (optional).                                                                                                                                                                                                                                                                                 |
@@ -666,7 +665,7 @@ whose primary button reads "Save and return to review" (Back and a secondary
 Next stay available). It goes straight back to Review, unless the change made
 new pages relevant and unanswered (e.g. a confirmation or follow-up). Then it
 shows an interstitial page (`review.moreInfoNeeded`, not part of the normal
-flow): "Your change means we need {n} more answer(s) before your review." plus
+flow): "Your change means we need a bit more information before your review." plus
 Continue, and walks those pages in order. The button reads "Continue" until the
 last one, which reads "Save and return to review". Pages that were already
 unanswered or skipped before the edit never start a detour.
@@ -676,7 +675,9 @@ unanswered or skipped before the edit never start a detour.
 `email`). The landlord's fields use `autocomplete="off"` and neutral ids and
 names (`ll-1`…), so browsers don't offer the tenant's saved address there. The
 rental's City/Town suggests Connecticut's 169 towns via a `<datalist>` bundled
-as data (`ct-towns.json`; free text still allowed). No address lookup services.
+as data (`ct-towns.json`, matching the State's list at
+https://portal.ct.gov/Government/Cities-and-Towns; free text still allowed). No
+address lookup services.
 
 **Fixed-format inputs stay within the form's boxes:** State is two letters
 (`maxlength=2`, uppercased, non-letters dropped); Zip is five digits
@@ -1398,8 +1399,10 @@ Work phase by phase. Stop at the end of each phase and report to the maintainer.
 - Attorney / legal aid review of the disclaimer, Terms, and Privacy text; the
   two neutral definitions shown in the wizard ("Cash for Keys: an offer from a
   landlord to pay a tenant to move out"; "Periodic rent: your regular rent
-  payment (for most people, monthly rent)"); and the complaint-type and
-  forwarding-address question flows (§7; wording table in the Phase 3b PR).
+  payment (for most people, monthly rent)"); and the paraphrased questions in the
+  complaint-type and forwarding-address flows (§7; wording table in the Phase 3b
+  PR): moved out, 62 or older, over-limit, "Was it the full amount?", the three
+  forwarding-address questions, and the other-deposit question.
 - Finalize app name (consider wording that doesn't imply guaranteed recovery).
   Do this before the attorney review, since the name appears in the disclaimer.
   Renaming = change `app.name` in `i18n/en.json`.

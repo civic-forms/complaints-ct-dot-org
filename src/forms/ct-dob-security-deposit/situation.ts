@@ -24,7 +24,8 @@ export function isReachable(state: DepositComplaintState, type: ComplaintType): 
     case 'currentTenantUnder62ExcessOverTwoMonths':
       return g.movedOut === 'no' && g.age62OrOlder === 'no' && g.overLimitHeld !== 'no';
     case 'currentTenantNoEscrowInfo':
-      return g.movedOut === 'no' && g.bankInfoGiven !== 'yes';
+      // Every current tenant reaches it; the confirmation is where they decide.
+      return g.movedOut === 'no';
   }
 }
 

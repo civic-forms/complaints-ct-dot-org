@@ -127,13 +127,17 @@ describe('Review edit detour', () => {
 
   it('routes over-limit No → Yes through the interstitial to the confirmation', () => {
     const before = start({
-      gates: { movedOut: 'no', age62OrOlder: 'yes', overLimitHeld: 'no', bankInfoGiven: 'yes' },
+      gates: {
+        movedOut: 'no',
+        age62OrOlder: 'yes',
+        overLimitHeld: 'no',
+        confirmed: { currentTenantNoEscrowInfo: 'no' },
+      },
     });
     const edit = session(pendingIds(pages, before));
     const after = answer(before, { gates: { overLimitHeld: 'yes' } });
     expect(editAction(pages, edit, 'situation.overLimitHeld', after)).toEqual({
       to: 'interstitial',
-      count: 1,
     });
     const detour = { ...edit, detour: true };
     const confirm = 'situation.confirm.currentTenant62PlusExcessOverOneMonth';
@@ -152,10 +156,8 @@ describe('Review edit detour', () => {
     });
     const edit = session(pendingIds(pages, before));
     const after = answer(before, { questions: { depositReturned: { answer: 'yes' } } });
-    // Amount, check cashed, and "Was it the full amount?"
     expect(editAction(pages, edit, 'deposit.depositReturned', after)).toEqual({
       to: 'interstitial',
-      count: 3,
     });
     expect(editAction(pages, { ...edit, detour: true }, 'review.moreInfoNeeded', after)).toEqual({
       to: 'page',

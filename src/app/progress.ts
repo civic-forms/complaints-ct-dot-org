@@ -113,7 +113,7 @@ export interface EditSession<Id extends string> {
 
 export type EditAction<Id extends string> =
   | { to: 'review' }
-  | { to: 'interstitial'; count: number }
+  | { to: 'interstitial' }
   | { to: 'page'; id: Id };
 
 /**
@@ -131,6 +131,6 @@ export function editAction<S, Id extends string>(
   const remaining = newlyPending(pages, session.before, state, current);
   const first = remaining[0];
   if (!first) return { to: 'review' };
-  if (!session.detour) return { to: 'interstitial', count: remaining.length };
+  if (!session.detour) return { to: 'interstitial' };
   return { to: 'page', id: first };
 }

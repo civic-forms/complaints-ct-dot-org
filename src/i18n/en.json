@@ -287,7 +287,6 @@
     "age62OrOlder": "Are you 62 or older?",
     "overLimitHeld62": "Is your landlord holding more than one month's rent as your security deposit?",
     "overLimitHeldUnder62": "Is your landlord holding more than two months' rent as your security deposit?",
-    "bankInfoGiven": "Has your landlord given you the name and address of the bank holding your deposit?",
     "confirmQuestion": "Does this describe your situation?",
     "noTypeTitle": "The form asks you to check at least one of these.",
     "fullAmountReturned": "Was it the full amount?",
@@ -307,7 +306,6 @@
     "propertyAddresses": "What are the addresses of the landlord's other properties?",
     "docketNumber": "What is the docket number?",
     "moreInfoNeededTitle": "A few more questions",
-    "moreInfoNeededOne": "Your change means we need 1 more answer before your review.",
-    "moreInfoNeededOther": "Your change means we need {n} more answers before your review."
+    "moreInfoNeeded": "Your change means we need a bit more information before your review."
   }
 }

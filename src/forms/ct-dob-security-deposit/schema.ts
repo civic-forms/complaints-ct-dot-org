@@ -57,7 +57,6 @@ export interface DepositComplaintState {
     movedOut: YesNo;
     age62OrOlder: YesNo;
     overLimitHeld: YesNoNotSure;
-    bankInfoGiven: YesNoNotSure;
     fullAmountReturned: YesNoNotSure;
     /** No prints $0.00 in Amount of any Other Deposit (the user's own answer, §2.2). */
     otherDepositPaid: YesNo;
@@ -139,7 +138,6 @@ export function initialState(): DepositComplaintState {
       movedOut: null,
       age62OrOlder: null,
       overLimitHeld: null,
-      bankInfoGiven: null,
       fullAmountReturned: null,
       otherDepositPaid: null,
       confirmed: {

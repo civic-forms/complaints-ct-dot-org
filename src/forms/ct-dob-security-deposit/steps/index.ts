@@ -54,7 +54,7 @@ import {
 } from './Rental.tsx';
 import { MoreInfoNeeded, Review } from './Review.tsx';
 import { Signature, Statements } from './Sign.tsx';
-import { Age62OrOlder, BankInfoGiven, MovedOut, NoTypeNote, OverLimitHeld } from './Situation.tsx';
+import { Age62OrOlder, MovedOut, NoTypeNote, OverLimitHeld } from './Situation.tsx';
 import { chapterIntro, confirmType } from './shared.tsx';
 import type { PageDef, StepProps } from './types.ts';
 import { Welcome } from './Welcome.tsx';
@@ -77,7 +77,6 @@ const PAGE_UI: Record<StepId, Entry> = {
   'situation.confirm.currentTenantUnder62ExcessOverTwoMonths': {
     Component: confirmType('currentTenantUnder62ExcessOverTwoMonths'),
   },
-  'situation.bankInfoGiven': { Component: BankInfoGiven },
   'situation.confirm.currentTenantNoEscrowInfo': {
     Component: confirmType('currentTenantNoEscrowInfo'),
   },

@@ -21,7 +21,6 @@ import {
   chapterProgress,
   type EditSession,
   editAction,
-  newlyPending,
   nextIndex,
   pendingIds,
   prevIndex,
@@ -139,7 +138,6 @@ export function App() {
     : action?.to === 'page'
       ? en.nav.continue
       : en.nav.saveAndReturn;
-  const detourCount = edit ? newlyPending(PAGES, edit.before, state).length : 0;
   const { Component } = page;
 
   return (
@@ -174,7 +172,6 @@ export function App() {
           unsupported={unsupported}
           warnings={warnings}
           pageError={showError ? ERROR_ID : null}
-          detourCount={detourCount}
         />
         {showError && page.answer && (
           <p id={ERROR_ID} class="page-error" tabIndex={-1}>
