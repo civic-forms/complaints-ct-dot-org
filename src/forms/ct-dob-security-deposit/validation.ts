@@ -7,7 +7,7 @@ import en from '../../i18n/en.json' with { type: 'json' };
 import { t } from '../../i18n/t.ts';
 import { deriveSlots, type SlotId } from './checklist.ts';
 import { isDisclaimerAccepted } from './disclaimer.ts';
-import type { TextPath } from './fieldMap.ts';
+import type { TextPath } from './field-map.ts';
 import type { DepositComplaintState, ISODate } from './schema.ts';
 import type { StepId } from './steps/ids.ts';
 import { pageOfPath } from './steps/pages.ts';

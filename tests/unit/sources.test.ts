@@ -8,7 +8,7 @@ import {
   TERMS_FIELDS,
   TEXT_FIELDS,
   YES_NO_FIELDS,
-} from '../../src/forms/ct-dob-security-deposit/fieldMap.ts';
+} from '../../src/forms/ct-dob-security-deposit/field-map.ts';
 import {
   COMPLAINT_TYPES,
   type DepositComplaintState,

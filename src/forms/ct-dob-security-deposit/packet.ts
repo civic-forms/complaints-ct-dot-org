@@ -14,7 +14,7 @@ import en from '../../i18n/en.json' with { type: 'json' };
 import { t } from '../../i18n/t.ts';
 import { deriveSlots, type SlotId } from './checklist.ts';
 import { isDisclaimerAccepted } from './disclaimer.ts';
-import { SIGNATURE_BOX, SIGNED_DATE } from './fieldMap.ts';
+import { SIGNATURE_BOX, SIGNED_DATE } from './field-map.ts';
 import { fillForm } from './fill.ts';
 import type { DepositComplaintState } from './schema.ts';
 import type { UnsupportedChars } from './values.ts';

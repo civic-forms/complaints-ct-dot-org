@@ -3,7 +3,7 @@
 // it is the single source for. index.ts adds titles and components.
 
 import { deriveSlots, type SlotId } from '../checklist.ts';
-import type { TextPath, YesNoQuestion } from '../fieldMap.ts';
+import type { TextPath, YesNoQuestion } from '../field-map.ts';
 import type { ComplaintType, DepositComplaintState } from '../schema.ts';
 import { anyChecked, isChecked, isReachable } from '../situation.ts';
 import type { ChapterId, StepId } from './ids.ts';

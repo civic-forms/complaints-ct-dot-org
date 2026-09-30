@@ -6,7 +6,7 @@ import en from '../../../i18n/en.json' with { type: 'json' };
 import towns from '../ct-towns.json' with { type: 'json' };
 import verbatim from '../verbatim.json' with { type: 'json' };
 import { kit, onTheForm } from './kit.ts';
-import { STATE_INPUT, ZIP_INPUT } from './Person.tsx';
+import { STATE_INPUT, ZIP_INPUT } from './person.tsx';
 import type { StepProps } from './types.ts';
 
 const q = en.fields.rental;

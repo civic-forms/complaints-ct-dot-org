@@ -5,7 +5,7 @@
 import { normalizeState, normalizeZip } from '../../../core/format/address.ts';
 import { TextField } from '../../../core/ui/fields.tsx';
 import en from '../../../i18n/en.json' with { type: 'json' };
-import type { TextPath } from '../fieldMap.ts';
+import type { TextPath } from '../field-map.ts';
 import verbatim from '../verbatim.json' with { type: 'json' };
 import { type AddressKey, addressAttrs, kit, onTheForm } from './kit.ts';
 import type { StepProps } from './types.ts';

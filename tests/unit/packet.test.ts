@@ -2,7 +2,7 @@ import { PDFDocument } from 'pdf-lib';
 import { describe, expect, it } from 'vitest';
 import { PdfLockedError, PdfUnreadableError } from '../../src/core/pdf/errors.ts';
 import type { AttachmentFile } from '../../src/core/pdf/pages.ts';
-import { TEXT_FIELDS } from '../../src/forms/ct-dob-security-deposit/fieldMap.ts';
+import { TEXT_FIELDS } from '../../src/forms/ct-dob-security-deposit/field-map.ts';
 
 import {
   buildComplaintPacket,

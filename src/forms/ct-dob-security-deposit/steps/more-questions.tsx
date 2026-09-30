@@ -5,10 +5,10 @@ import { ChoiceGroup, TextField, TextList } from '../../../core/ui/fields.tsx';
 import en from '../../../i18n/en.json' with { type: 'json' };
 import { t } from '../../../i18n/t.ts';
 import verbatim from '../verbatim.json' with { type: 'json' };
-import { formYesNo } from './Deposit.tsx';
+import { formYesNo } from './deposit.tsx';
 import { kit, onTheForm } from './kit.ts';
 import type { StepProps } from './types.ts';
-import { FORM_YES_NO, FORM_YES_NO_NOT_SURE } from './yesNo.ts';
+import { FORM_YES_NO, FORM_YES_NO_NOT_SURE } from './yes-no.ts';
 
 const f = en.fields.questions;
 const q = verbatim.page1Labels;

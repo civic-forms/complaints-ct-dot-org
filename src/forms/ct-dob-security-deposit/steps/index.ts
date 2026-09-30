@@ -5,6 +5,7 @@
 import type { FunctionComponent } from 'preact';
 import en from '../../../i18n/en.json' with { type: 'json' };
 import { Comments } from './Comments.tsx';
+import { Disclaimer } from './Disclaimer.tsx';
 import {
   CheckCashed,
   DepositReturned,
@@ -17,9 +18,8 @@ import {
   OtherDepositPaid,
   ReturnedAmount,
   SecurityDeposit,
-} from './Deposit.tsx';
-import { Disclaimer } from './Disclaimer.tsx';
-import { DocumentsIntro, slotPage } from './Documents.tsx';
+} from './deposit.tsx';
+import { DocumentsIntro, slotPage } from './documents.tsx';
 import type { StepId } from './ids.ts';
 import {
   CashForKeys,
@@ -30,8 +30,14 @@ import {
   PropertyAddresses,
   RoommateNames,
   Roommates,
-} from './MoreQuestions.tsx';
-import { ForwardingAddressSlot, FwdGiven, FwdInWriting, FwdProofAvailable } from './NewAddress.tsx';
+} from './more-questions.tsx';
+import {
+  ForwardingAddressSlot,
+  FwdGiven,
+  FwdInWriting,
+  FwdProofAvailable,
+} from './new-address.tsx';
+import { PAGE_SPECS } from './pages.ts';
 import {
   LandlordAddress,
   LandlordEmail,
@@ -41,8 +47,8 @@ import {
   TenantEmail,
   TenantName,
   TenantPhone,
-} from './Person.tsx';
-import { PAGE_SPECS } from './pages.ts';
+} from './person.tsx';
+import { MoreInfoNeeded, Review } from './Review.tsx';
 import {
   HousingComplex,
   LastRentPaid,
@@ -51,11 +57,10 @@ import {
   RentalAddress,
   Terms,
   TypeOfRental,
-} from './Rental.tsx';
-import { MoreInfoNeeded, Review } from './Review.tsx';
-import { Signature, Statements } from './Sign.tsx';
-import { Age62OrOlder, MovedOut, NoTypeNote, OverLimitHeld } from './Situation.tsx';
+} from './rental.tsx';
 import { chapterIntro, confirmType } from './shared.tsx';
+import { Signature, Statements } from './sign.tsx';
+import { Age62OrOlder, MovedOut, NoTypeNote, OverLimitHeld } from './situation.tsx';
 import type { PageDef, StepProps } from './types.ts';
 import { Welcome } from './Welcome.tsx';
 

@@ -3,7 +3,7 @@
 import type { Unprintable } from '../../../core/ui/fields.tsx';
 import en from '../../../i18n/en.json' with { type: 'json' };
 import { t } from '../../../i18n/t.ts';
-import type { TextPath } from '../fieldMap.ts';
+import type { TextPath } from '../field-map.ts';
 import type { DepositComplaintState, Person } from '../schema.ts';
 import { inlineMessages, unprintableMessage } from '../validation.ts';
 import type { StepProps } from './types.ts';

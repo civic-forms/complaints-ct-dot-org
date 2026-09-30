@@ -221,7 +221,7 @@ Edge. Accessibility target: **WCAG 2.1 AA**.
 │  │     ├─ assets.ts           (loadPdfAssets(): lazy, memoized import of loader.ts)
 │  │     ├─ preview.ts          (lazy entry for the UI: buildPacket(state, files, mode))
 │  │     ├─ schema.ts           (state types + initial state)
-│  │     ├─ fieldMap.ts         (schema path → AcroForm field OR coordinates)
+│  │     ├─ field-map.ts         (schema path → AcroForm field OR coordinates)
 │  │     ├─ values.ts           (textValue + per-field sanitize; no pdf-lib; live char check)
 │  │     ├─ fill.ts             (state → form fields: §6.2 follow-ups, fitting)
 │  │     ├─ packet.ts           (buildComplaintPacket: preview/final, disclaimer gate, filename)
@@ -265,7 +265,7 @@ boundary clean.
   (`formerTenantDepositNotReturned`, …): page ids like
   `situation.confirm.<ComplaintType>`, helpers like `isReachable(state, type)` /
   `isChecked(state, type)`. Form positions ("box 1", `Check1`–`Check4`) appear
-  only in `fieldMap.ts` and as cross-references in this file. A test enforces it.
+  only in `field-map.ts` and as cross-references in this file. A test enforces it.
 - Answer fields are named as states (past participles or adjectives):
   `movedOut`, `overLimitHeld`, `fwdGiven`.
 - Page ids are `chapter.page` and name what the page holds (`deposit.neededDocs`,
@@ -309,7 +309,7 @@ refactoring.
 Taken from `pnpm form:dump`, `pnpm form:text`, and a rendered visual check of
 `sdcompform-rev-2026.pdf` (SHA-256 `dde91f83…d715`). The full per-field output
 (names, rects, export values) is regenerated into `scripts/out/`. The mapping
-lives in `fieldMap.ts`; `tests/unit/field-map.test.ts` checks that every
+lives in `field-map.ts`; `tests/unit/field-map.test.ts` checks that every
 template field is mapped or listed as intentionally blank.
 
 1. **AcroForm: yes.** It has 63 fields and no XFA. `NeedAppearances` is unset, and the
@@ -332,7 +332,7 @@ template field is mapped or listed as intentionally blank.
      which the app can't verify; the attachment index page lists what is enclosed.
    - **`IfYes2`**, a wide text field on the **correspondence** row. The printed
      question asks only to "enclose a copy" and has no fill-in instruction.
-     **Decision: left blank.** `fieldMap.ts` lists it and the page 3 boxes in
+     **Decision: left blank.** `field-map.ts` lists it and the page 3 boxes in
      `INTENTIONALLY_BLANK`.
    - **Question → field:** interest `Check Box8` (+`IfYes`), correspondence
      `Check Box9`, deposit returned `Check Box10` (+`Yes Amount`), check cashed
@@ -348,7 +348,7 @@ template field is mapped or listed as intentionally blank.
    underscores, so they are drawn by coordinates. The printed line's baseline is y ≈ 171. The signature
    underscores run from x ≈ 93 to 307, and the date underscores from x ≈ 333 to 456. The clear space
    above the line is up to the attestation line at y ≈ 207. Confirmed against Phase 2 sample output
-   (`SIGNATURE_BOX` / `SIGNED_DATE` in `fieldMap.ts`): the signature image is scaled to fit
+   (`SIGNATURE_BOX` / `SIGNED_DATE` in `field-map.ts`): the signature image is scaled to fit
    x 94–306, y 169–204, bottom-left aligned on the line; the date is drawn at x 338, baseline y 173,
    10pt.
 
@@ -374,7 +374,7 @@ to "handle issue #N"; then follow these steps in order.
    statement changes. **Stop for maintainer review**, as in Phase 1.
 3. **Apply, based on the review:**
    - Text only → update `verbatim.json` (and `fieldLabels`).
-   - Fields moved → update `fieldMap.ts`.
+   - Fields moved → update `field-map.ts`.
    - Fields added/removed → update `schema.ts`, the relevant wizard steps,
      `checklist.ts`, and validation. Bump `meta.schemaVersion` and add a
      migration so saved drafts from the old revision still load, with new
@@ -718,10 +718,10 @@ All added pages are US Letter (612 × 792 pt), 0.5in margins, Helvetica, black.
 
 - Fonts: pdf-lib's standard fonts, Helvetica and Helvetica-Bold, with WinAnsi
   encoding (Western European Latin). Nothing is bundled or embedded.
-- If AcroForm: fill by field name from `fieldMap.ts`, set text in Helvetica at
+- If AcroForm: fill by field name from `field-map.ts`, set text in Helvetica at
   the fitted size (§8.3), `form.updateFieldAppearances(font)`, then `form.flatten()`.
 - If not (or for fields missing from the AcroForm): draw text at
-  `{ page, x, y, maxWidth, maxHeight? }` from `fieldMap.ts`.
+  `{ page, x, y, maxWidth, maxHeight? }` from `field-map.ts`.
 - Checkboxes on a flat PDF: draw an "X" centered in the box rect.
 - Formatting at render: dates `MM/DD/YY`; money `$1,250.00`; phone
   `(860) 555-0123` when 10 digits, otherwise as typed.
@@ -1240,7 +1240,7 @@ Keep them in sync.
   printed field has exactly one source page, reachable on some path; each page's
   relevance reads only earlier answers; Continue rules; chapter progress; the
   Review edit detour; other deposit No → `$0.00`; landlord address attributes;
-  169 towns; no "box N" names outside `fieldMap.ts`.
+  169 towns; no "box N" names outside `field-map.ts`.
 - Follow-up rule (§6.2): hidden follow-ups not rendered.
 - Text fitting: shrink behaviour and overflow → continuation page.
 - Fill round-trip: build a packet from fixture state, reload with pdf-lib, assert
@@ -1356,9 +1356,9 @@ Work phase by phase. Stop at the end of each phase and report to the maintainer.
 1. **Scaffold + form inventory.** pnpm (with §3.1 settings)/Vite/Preact/TS/Biome/Vitest set up. Commit the
    template + hash. Run `scripts/dump-form-fields.ts` (field names, types, pages,
    rects, export values) and `scripts/extract-form-text.ts`. Report findings on
-   §5.2 and any `verbatim.json` corrections. **Do not write fieldMap.ts until
+   §5.2 and any `verbatim.json` corrections. **Do not write field-map.ts until
    the maintainer reviews the dump.**
-2. **PDF packet from fixtures.** `fieldMap.ts`, fill + flatten, text fitting,
+2. **PDF packet from fixtures.** `field-map.ts`, fill + flatten, text fitting,
    continuation page, index page, exhibit pages, size budget. No UI. Unit tests.
    Output sample PDFs for visual review.
 3. **Wizard + state.** Steps 0–12 except uploads/signature, validation (Send-time

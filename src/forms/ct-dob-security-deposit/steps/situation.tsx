@@ -10,7 +10,7 @@ import verbatim from '../verbatim.json' with { type: 'json' };
 import { kit } from './kit.ts';
 import { FormText, LegalHelp } from './shared.tsx';
 import type { StepProps } from './types.ts';
-import { APP_YES_NO, APP_YES_NO_NOT_SURE } from './yesNo.ts';
+import { APP_YES_NO, APP_YES_NO_NOT_SURE } from './yes-no.ts';
 
 const p = en.pages;
 type Gate = Exclude<keyof DepositComplaintState['gates'], 'confirmed'>;

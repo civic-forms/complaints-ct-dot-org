@@ -6,7 +6,7 @@ import { formatDateMMDDYY } from '../../core/format/date.ts';
 import { formatCents } from '../../core/format/money.ts';
 import { formatPhone } from '../../core/format/phone.ts';
 import { type Charset, sanitize } from '../../core/pdf/text.ts';
-import { TEXT_FIELDS, type TextFieldEntry, type TextPath } from './fieldMap.ts';
+import { TEXT_FIELDS, type TextFieldEntry, type TextPath } from './field-map.ts';
 import type { DepositComplaintState, YesNo } from './schema.ts';
 
 export interface UnsupportedChars {

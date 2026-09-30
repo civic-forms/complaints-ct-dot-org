@@ -10,7 +10,7 @@ import { createObjectUrl, revokeObjectUrl } from '../../../core/blob-urls.ts';
 import { todayIso } from '../../../core/format/date.ts';
 import en from '../../../i18n/en.json' with { type: 'json' };
 import { isDisclaimerAccepted } from '../disclaimer.ts';
-import type { TextPath } from '../fieldMap.ts';
+import type { TextPath } from '../field-map.ts';
 import { COMPLAINT_TYPES, type DepositComplaintState, type YesNoNotSure } from '../schema.ts';
 import { type Issue, missingRequired, softWarnings } from '../validation.ts';
 import { textValue } from '../values.ts';

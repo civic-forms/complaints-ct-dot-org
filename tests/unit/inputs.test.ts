@@ -45,8 +45,8 @@ describe("Connecticut's towns (rental City/Town suggestions)", () => {
 
 describe('naming (§4)', () => {
   // Complaint types are named by their ComplaintType keys; form positions
-  // ("box 1") belong only in fieldMap.ts.
-  it('never refers to a complaint type as "box N" outside fieldMap.ts', () => {
+  // ("box 1") belong only in field-map.ts.
+  it('never refers to a complaint type as "box N" outside field-map.ts', () => {
     const root = join(import.meta.dirname, '../../src');
     const files = (dir: string): string[] =>
       readdirSync(dir).flatMap((name) => {
@@ -54,7 +54,7 @@ describe('naming (§4)', () => {
         return statSync(path).isDirectory() ? files(path) : [path];
       });
     const offenders = files(root)
-      .filter((f) => /\.(ts|tsx|json)$/.test(f) && !f.endsWith('fieldMap.ts'))
+      .filter((f) => /\.(ts|tsx|json)$/.test(f) && !f.endsWith('field-map.ts'))
       .filter((f) => /\bbox ?[1-4]\b/i.test(readFileSync(f, 'utf8')))
       .map((f) => relative(root, f));
     expect(offenders).toEqual([]);

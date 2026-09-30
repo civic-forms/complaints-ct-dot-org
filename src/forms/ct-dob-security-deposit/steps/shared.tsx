@@ -11,7 +11,7 @@ import verbatim from '../verbatim.json' with { type: 'json' };
 import type { ChapterId } from './ids.ts';
 import { kit } from './kit.ts';
 import type { StepProps } from './types.ts';
-import { APP_YES_NO } from './yesNo.ts';
+import { APP_YES_NO } from './yes-no.ts';
 
 /** A chapter's opening page: a sentence or two, then Continue. */
 export function chapterIntro(chapter: ChapterId) {

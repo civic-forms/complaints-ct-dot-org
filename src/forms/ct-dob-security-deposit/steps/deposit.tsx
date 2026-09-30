@@ -9,9 +9,9 @@ import { deriveSlots } from '../checklist.ts';
 import type { DepositComplaintState } from '../schema.ts';
 import verbatim from '../verbatim.json' with { type: 'json' };
 import { kit, onTheForm } from './kit.ts';
-import { gateQuestion } from './Situation.tsx';
+import { gateQuestion } from './situation.tsx';
 import type { StepProps } from './types.ts';
-import { FORM_YES_NO } from './yesNo.ts';
+import { FORM_YES_NO } from './yes-no.ts';
 
 const f = en.fields;
 const labels = verbatim.fieldLabels.rental;

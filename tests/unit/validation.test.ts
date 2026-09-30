@@ -6,7 +6,7 @@ import {
   acceptDisclaimer,
   isDisclaimerAccepted,
 } from '../../src/forms/ct-dob-security-deposit/disclaimer.ts';
-import { TEXT_FIELDS } from '../../src/forms/ct-dob-security-deposit/fieldMap.ts';
+import { TEXT_FIELDS } from '../../src/forms/ct-dob-security-deposit/field-map.ts';
 import {
   buildComplaintPacket,
   DisclaimerNotAcceptedError,
