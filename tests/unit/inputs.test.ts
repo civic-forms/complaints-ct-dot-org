@@ -1,7 +1,7 @@
 // Address inputs (CLAUDE.md §7), the towns list, and naming (§4).
 
 import { readdirSync, readFileSync, statSync } from 'node:fs';
-import { join, relative } from 'node:path';
+import { basename, join, relative } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import towns from '../../src/forms/ct-dob-security-deposit/ct-towns.json' with { type: 'json' };
 import { addressAttrs } from '../../src/forms/ct-dob-security-deposit/steps/kit.ts';
@@ -43,17 +43,39 @@ describe("Connecticut's towns (rental City/Town suggestions)", () => {
   });
 });
 
+const repo = join(import.meta.dirname, '../..');
+const walk = (dir: string): string[] =>
+  readdirSync(dir).flatMap((name) => {
+    const path = join(dir, name);
+    // Untracked: script output, dependencies, and dotfiles such as .DS_Store.
+    if (name === 'out' || name === 'node_modules' || name.startsWith('.')) return [];
+    return statSync(path).isDirectory() ? walk(path) : [path];
+  });
+
 describe('naming (§4)', () => {
+  it('uses kebab-case file names, except files named after a component or hook', () => {
+    const kebab = /^[a-z0-9]+(-[a-z0-9]+)*(\.[a-z0-9]+)+$/;
+    const offenders = ['src', 'tests', 'scripts']
+      .flatMap((dir) => walk(join(repo, dir)))
+      .filter((path) => {
+        const name = basename(path);
+        if (kebab.test(name)) return false;
+        const hook = name.match(/^(use[A-Z][A-Za-z0-9]*)\.tsx?$/)?.[1];
+        const component = name.match(/^([A-Z][A-Za-z0-9]*)\.tsx$/)?.[1];
+        const exported = hook ?? component;
+        if (!exported) return true;
+        const source = readFileSync(path, 'utf8');
+        return !new RegExp(`export (function|const) ${exported}\\b`).test(source);
+      })
+      .map((path) => relative(repo, path));
+    expect(offenders).toEqual([]);
+  });
+
   // Complaint types are named by their ComplaintType keys; form positions
   // ("box 1") belong only in field-map.ts.
   it('never refers to a complaint type as "box N" outside field-map.ts', () => {
-    const root = join(import.meta.dirname, '../../src');
-    const files = (dir: string): string[] =>
-      readdirSync(dir).flatMap((name) => {
-        const path = join(dir, name);
-        return statSync(path).isDirectory() ? files(path) : [path];
-      });
-    const offenders = files(root)
+    const root = join(repo, 'src');
+    const offenders = walk(root)
       .filter((f) => /\.(ts|tsx|json)$/.test(f) && !f.endsWith('field-map.ts'))
       .filter((f) => /\bbox ?[1-4]\b/i.test(readFileSync(f, 'utf8')))
       .map((f) => relative(root, f));

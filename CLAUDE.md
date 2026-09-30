@@ -270,6 +270,11 @@ boundary clean.
   `movedOut`, `overLimitHeld`, `fwdGiven`.
 - Page ids are `chapter.page` and name what the page holds (`deposit.neededDocs`,
   `newAddress.forwardingAddressSlot`).
+- File names are kebab-case (`field-map.ts`, `more-questions.tsx`), except a
+  file named after the component it exports (`App.tsx`, `SlotPage.tsx`) or a
+  hook (`useSomething.ts`). A test enforces it. This Mac's filesystem ignores
+  case and Linux CI doesn't, so a rename that only changes letter case takes two
+  `git mv` steps through a temporary name.
 
 **i18n:** v1 is English only, but all UI copy goes through `i18n/en.json` and
 state includes `meta.formVariant: "en"` so a Spanish variant (official DOB
