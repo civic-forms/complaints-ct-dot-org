@@ -1,24 +1,28 @@
-// Step 8: one upload slot per derived checklist item (CLAUDE.md §8.4). Uploads
-// arrive in Phase 4; for now this lists the slots.
+// Documents (CLAUDE.md §7, §8.4): an intro listing the derived slots, then one
+// page per slot. Uploads arrive in Phase 4.
 
 import en from '../../../i18n/en.json' with { type: 'json' };
-import { deriveSlots } from '../checklist.ts';
+import { deriveSlots, type SlotId } from '../checklist.ts';
+import { SlotUpload } from './shared.tsx';
 import type { StepProps } from './types.ts';
 
-export function Documents({ state }: StepProps) {
+export function DocumentsIntro({ state }: StepProps) {
   return (
     <>
-      <p>{en.steps.documents.placeholder}</p>
+      <p class="lead">{en.chapters.documents.intro}</p>
       <ol class="checklist">
         {deriveSlots(state).map((slot) => (
           <li key={slot.id}>
             <span class={slot.appDefined ? undefined : 'verbatim'}>{slot.label}</span>
-            {slot.hint && <span class="field-help"> ({slot.hint})</span>}
-            {slot.help && <p class="field-help">{slot.help}</p>}
-            {slot.note && <p class="field-help">{slot.note}</p>}
           </li>
         ))}
       </ol>
     </>
   );
+}
+
+export function slotPage(slotId: SlotId) {
+  return function SlotPage({ state }: StepProps) {
+    return <SlotUpload slotId={slotId} state={state} />;
+  };
 }

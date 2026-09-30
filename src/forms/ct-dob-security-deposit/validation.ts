@@ -1,5 +1,5 @@
-// Validation (CLAUDE.md §6.3). Hard requirements block Send only, never step
-// navigation. Soft warnings never block and are phrased as observations, never
+// Validation (CLAUDE.md §6.3). Hard requirements block Send. Moving between
+// pages needs only the page's own answer or "Skip for now" (§7). Soft warnings never block and are phrased as observations, never
 // as advice about which answer is right (§2.2).
 
 import { budgetStatus } from '../../core/pdf/budget.ts';
@@ -7,14 +7,17 @@ import en from '../../i18n/en.json' with { type: 'json' };
 import { t } from '../../i18n/t.ts';
 import { deriveSlots, type SlotId } from './checklist.ts';
 import { isDisclaimerAccepted } from './disclaimer.ts';
+import type { TextPath } from './fieldMap.ts';
 import type { DepositComplaintState, ISODate } from './schema.ts';
-import { type StepId, stepOfPath } from './steps/ids.ts';
-import type { UnsupportedChars } from './values.ts';
+import type { StepId } from './steps/ids.ts';
+import { pageOfPath } from './steps/pages.ts';
+import { textValue, type UnsupportedChars } from './values.ts';
 import verbatim from './verbatim.json' with { type: 'json' };
 
 export interface Issue {
   /** Stable key: a schema path ("tenant.name"), "slot.<id>", "chars.<path>", or a rule name. */
   id: string;
+  /** The page to fix it on (Edit links). */
   step: StepId;
   /** What the issue is about (usually the form's label); null when the message says it all. */
   label: string | null;
@@ -39,22 +42,24 @@ export function missingRequired(state: DepositComplaintState): Issue[] {
   need(
     !Object.values(state.complaintTypes).some(Boolean),
     'complaintTypes',
-    'situation',
+    'situation.movedOut',
     req.complaintType,
   );
   const { tenant, landlord, rental } = state;
-  need(blank(tenant.name), 'tenant.name', 'aboutYou', labels.tenant.name);
-  need(blank(tenant.street), 'tenant.street', 'aboutYou', labels.tenant.street);
-  need(blank(tenant.city), 'tenant.city', 'aboutYou', labels.tenant.city);
-  need(blank(tenant.state), 'tenant.state', 'aboutYou', labels.tenant.state);
-  need(blank(tenant.zip), 'tenant.zip', 'aboutYou', labels.tenant.zip);
-  need(blank(landlord.name), 'landlord.name', 'landlord', labels.landlord.name);
-  need(blank(rental.unitStreet), 'rental.unitStreet', 'rental', labels.rental.unitStreet);
-  need(blank(rental.city), 'rental.city', 'rental', labels.rental.city);
-  need(blank(rental.zip), 'rental.zip', 'rental', labels.rental.zip);
+  const text = (path: TextPath, value: string, label: string) =>
+    need(blank(value), path, pageOfPath(path), label);
+  text('tenant.name', tenant.name, labels.tenant.name);
+  text('tenant.street', tenant.street, labels.tenant.street);
+  text('tenant.city', tenant.city, labels.tenant.city);
+  text('tenant.state', tenant.state, labels.tenant.state);
+  text('tenant.zip', tenant.zip, labels.tenant.zip);
+  text('landlord.name', landlord.name, labels.landlord.name);
+  text('rental.unitStreet', rental.unitStreet, labels.rental.unitStreet);
+  text('rental.city', rental.city, labels.rental.city);
+  text('rental.zip', rental.zip, labels.rental.zip);
   need(!isDisclaimerAccepted(state), 'disclaimer', 'disclaimer', req.disclaimer);
-  need(!state.signature.statementsRead, 'statementsRead', 'sign', req.statementsRead);
-  need(!state.signature.pngDataUrl, 'signature', 'sign', req.signature);
+  need(!state.signature.statementsRead, 'statementsRead', 'sign.statements', req.statementsRead);
+  need(!state.signature.pngDataUrl, 'signature', 'sign.signature', req.signature);
   return issues;
 }
 
@@ -82,163 +87,177 @@ export function unprintableMessage(chars: readonly string[]): string {
   return t(en.common.unprintable, { chars: formatChars(chars) });
 }
 
-/** §6.3 soft warnings, in step order. */
+/** §6.3 soft warnings. Review groups them by chapter. */
 export function softWarnings(state: DepositComplaintState, inputs: WarningInputs): Issue[] {
   const issues: Issue[] = [];
   const add = (id: string, step: StepId, label: string | null, message: string, inline = false) =>
     issues.push({ id, step, label, message, ...(inline ? { inline: true as const } : {}) });
-  const types = state.complaintTypes;
-  const { tenant, landlord, rental, questions: qs } = state;
-
-  // Step 1: neutral consistency notes.
-  if (
-    types.formerTenantDepositNotReturned &&
-    (types.currentTenant62PlusExcessOverOneMonth ||
-      types.currentTenantUnder62ExcessOverTwoMonths ||
-      types.currentTenantNoEscrowInfo)
-  ) {
-    add('box1WithCurrent', 'situation', null, warn.box1WithCurrent, true);
-  }
-  if (
-    types.currentTenant62PlusExcessOverOneMonth &&
-    types.currentTenantUnder62ExcessOverTwoMonths
-  ) {
-    add('box2And3', 'situation', null, warn.box2And3, true);
-  }
+  const { rental, questions: qs } = state;
 
   // Empty fields the form asks for (hard-required ones are listed separately).
   // Fixed-format fields (State, Zip, dates, money, choices) can't hold "Unknown".
-  const emptyText = (value: string, id: string, step: StepId, label: string) => {
-    if (blank(value)) add(id, step, label, warn.empty);
+  // Each warning links to the page that asks for the field.
+  const emptyText = (path: TextPath, label: string) => {
+    if (textValue(path, state) === '') add(path, pageOfPath(path), label, warn.empty);
   };
-  const emptyFixed = (empty: boolean, id: string, step: StepId, label: string) => {
-    if (empty) add(id, step, label, warn.emptyFixed);
+  const emptyFixed = (path: TextPath, label: string, when = true) => {
+    if (when && textValue(path, state) === '') add(path, pageOfPath(path), label, warn.emptyFixed);
   };
   const unanswered = (empty: boolean, id: string, step: StepId, label: string) => {
     if (empty) add(id, step, label, warn.notAnswered);
   };
-  emptyText(tenant.daytimePhone, 'tenant.daytimePhone', 'aboutYou', labels.tenant.daytimePhone);
-  emptyText(landlord.street, 'landlord.street', 'landlord', labels.landlord.street);
-  emptyText(landlord.city, 'landlord.city', 'landlord', labels.landlord.city);
-  emptyFixed(blank(landlord.state), 'landlord.state', 'landlord', labels.landlord.state);
-  emptyFixed(blank(landlord.zip), 'landlord.zip', 'landlord', labels.landlord.zip);
-  emptyText(
-    landlord.daytimePhone,
-    'landlord.daytimePhone',
-    'landlord',
-    labels.landlord.daytimePhone,
+  const followUp = (empty: boolean, id: TextPath, label: string) => {
+    if (empty) add(id, pageOfPath(id), label, warn.followUpEmpty);
+  };
+  emptyText('tenant.daytimePhone', labels.tenant.daytimePhone);
+  emptyText('landlord.street', labels.landlord.street);
+  emptyText('landlord.city', labels.landlord.city);
+  emptyFixed('landlord.state', labels.landlord.state);
+  emptyFixed('landlord.zip', labels.landlord.zip);
+  emptyText('landlord.daytimePhone', labels.landlord.daytimePhone);
+  emptyFixed('rental.state', labels.rental.state);
+  unanswered(
+    !rental.typeOfRental,
+    'rental.typeOfRental',
+    pageOfPath('typeOfRental'),
+    labels.rental.typeOfRental,
   );
-  emptyFixed(blank(rental.state), 'rental.state', 'rental', labels.rental.state);
-  unanswered(!rental.typeOfRental, 'rental.typeOfRental', 'rental', labels.rental.typeOfRental);
   unanswered(
     !rental.terms.lease && !rental.terms.monthToMonth,
     'rental.terms',
-    'rental',
+    pageOfPath('terms.lease'),
     labels.rental.terms,
   );
-  emptyFixed(!rental.moveInDate, 'rental.moveInDate', 'rental', labels.rental.moveInDate);
-  // Boxes 2–4 are for current tenants, who have no move-out date yet: only
-  // note an empty one when box 1 is checked or no type is chosen yet.
-  const onlyCurrentTenantTypes =
-    !types.formerTenantDepositNotReturned && Object.values(types).some(Boolean);
-  emptyFixed(
-    !rental.moveOutDate && !onlyCurrentTenantTypes,
-    'rental.moveOutDate',
-    'rental',
-    labels.rental.moveOutDate,
-  );
+  emptyFixed('rental.moveInDate', labels.rental.moveInDate);
+  // Current tenants have no move-out date yet; the Move Out page is skipped for them.
+  emptyFixed('rental.moveOutDate', labels.rental.moveOutDate, state.gates.movedOut !== 'no');
+  emptyFixed('rental.lastRentPaidDate', labels.rental.lastRentPaidDate);
+  // Other deposit answered "No" shows $0.00, so it isn't empty.
   for (const key of ['monthlyRentCents', 'securityDepositCents', 'otherDepositCents'] as const) {
-    emptyFixed(rental[key] === null, `rental.${key}`, 'money', labels.rental[key]);
+    emptyFixed(`rental.${key}`, labels.rental[key]);
   }
-  emptyFixed(
-    !rental.lastRentPaidDate,
-    'rental.lastRentPaidDate',
-    'money',
-    labels.rental.lastRentPaidDate,
-  );
 
   // Dates.
   if (rental.moveInDate && rental.moveOutDate && rental.moveOutDate < rental.moveInDate) {
-    add('rental.moveOutDate', 'rental', labels.rental.moveOutDate, warn.moveOutBeforeMoveIn, true);
+    add(
+      'rental.moveOutDate',
+      pageOfPath('rental.moveOutDate'),
+      labels.rental.moveOutDate,
+      warn.moveOutBeforeMoveIn,
+      true,
+    );
   }
   const future = (date: ISODate, id: string, step: StepId, label: string) => {
     if (date && date > inputs.today) add(id, step, label, warn.futureDate, true);
   };
-  future(rental.moveInDate, 'rental.moveInDate', 'rental', labels.rental.moveInDate);
-  future(rental.moveOutDate, 'rental.moveOutDate', 'rental', labels.rental.moveOutDate);
-  future(
-    rental.lastRentPaidDate,
-    'rental.lastRentPaidDate',
-    'money',
-    labels.rental.lastRentPaidDate,
-  );
+  for (const key of ['moveInDate', 'moveOutDate', 'lastRentPaidDate'] as const) {
+    const path = `rental.${key}` as const;
+    future(rental[key], path, pageOfPath(path), labels.rental[key]);
+  }
 
-  // Money step questions and their follow-ups.
+  // The form's YES/NO questions and their follow-ups.
   const dr = qs.depositReturned;
-  unanswered(!dr.answer, 'questions.depositReturned', 'money', q.depositReturned);
+  unanswered(
+    !dr.answer,
+    'questions.depositReturned',
+    pageOfPath('yesNo.depositReturned'),
+    q.depositReturned,
+  );
   if (dr.answer === 'yes') {
-    if (dr.amountCents === null) {
-      add('questions.depositReturned.amountCents', 'money', q.depositReturned, warn.followUpEmpty);
-    }
-    unanswered(!dr.checkCashed, 'questions.depositReturned.checkCashed', 'money', q.checkCashed);
+    followUp(dr.amountCents === null, 'questions.depositReturned.amountCents', q.depositReturned);
+    unanswered(
+      !dr.checkCashed,
+      'questions.depositReturned.checkCashed',
+      pageOfPath('yesNo.checkCashed'),
+      q.checkCashed,
+    );
   }
   const ip = qs.interestPaid;
-  unanswered(!ip.answer, 'questions.interestPaid', 'money', q.interestPaid);
+  unanswered(
+    !ip.answer,
+    'questions.interestPaid',
+    pageOfPath('yesNo.interestPaid'),
+    q.interestPaid,
+  );
   if (ip.answer === 'yes') {
-    const filled = ip.payments.filter((p) => p.date || p.amountCents !== null);
-    if (filled.length === 0) {
-      add('questions.interestPaid.payments', 'money', q.interestPaid, warn.followUpEmpty);
-    }
+    const payments = pageOfPath('questions.interestPaid.payments');
+    followUp(
+      ip.payments.every((p) => !p.date && p.amountCents === null),
+      'questions.interestPaid.payments',
+      q.interestPaid,
+    );
     ip.payments.forEach((p, i) => {
-      future(p.date, `questions.interestPaid.payments.${i}.date`, 'money', q.interestPaid);
+      future(p.date, `questions.interestPaid.payments.${i}.date`, payments, q.interestPaid);
     });
   }
-
-  // More questions.
-  unanswered(!qs.cashForKeys.answer, 'questions.cashForKeys', 'moreQuestions', q.cashForKeys);
-  const list = (
-    answer: string | null,
-    items: readonly string[],
-    id: 'roommates' | 'landlordOtherProperties',
-    field: string,
-  ) => {
-    unanswered(!answer, `questions.${id}`, 'moreQuestions', q[id]);
-    if (answer === 'yes' && items.every(blank)) {
-      add(`questions.${id}.${field}`, 'moreQuestions', q[id], warn.followUpEmpty);
-    }
-  };
-  list(qs.roommates.answer, qs.roommates.names, 'roommates', 'names');
-  list(
-    qs.landlordOtherProperties.answer,
-    qs.landlordOtherProperties.addresses,
-    'landlordOtherProperties',
-    'addresses',
+  unanswered(
+    !qs.cashForKeys.answer,
+    'questions.cashForKeys',
+    pageOfPath('cashForKeys'),
+    q.cashForKeys,
   );
+  unanswered(
+    !qs.roommates.answer,
+    'questions.roommates',
+    pageOfPath('yesNo.roommates'),
+    q.roommates,
+  );
+  if (qs.roommates.answer === 'yes') {
+    followUp(qs.roommates.names.every(blank), 'questions.roommates.names', q.roommates);
+  }
+  const op = qs.landlordOtherProperties;
+  unanswered(
+    !op.answer,
+    'questions.landlordOtherProperties',
+    pageOfPath('yesNo.landlordOtherProperties'),
+    q.landlordOtherProperties,
+  );
+  if (op.answer === 'yes') {
+    followUp(
+      op.addresses.every(blank),
+      'questions.landlordOtherProperties.addresses',
+      q.landlordOtherProperties,
+    );
+  }
   unanswered(
     !qs.correspondenceReceived.answer,
     'questions.correspondenceReceived',
-    'moreQuestions',
+    pageOfPath('yesNo.correspondenceReceived'),
     q.correspondenceReceived,
   );
-  unanswered(!qs.courtAction.answer, 'questions.courtAction', 'moreQuestions', q.courtAction);
-  if (qs.courtAction.answer === 'yes' && blank(qs.courtAction.docketNumber)) {
-    add('questions.courtAction.docketNumber', 'moreQuestions', q.courtAction, warn.followUpEmpty);
+  unanswered(
+    !qs.courtAction.answer,
+    'questions.courtAction',
+    pageOfPath('yesNo.courtAction'),
+    q.courtAction,
+  );
+  if (qs.courtAction.answer === 'yes') {
+    followUp(
+      blank(qs.courtAction.docketNumber),
+      'questions.courtAction.docketNumber',
+      q.courtAction,
+    );
   }
 
   // Characters the form can't print (§8.2).
   for (const u of inputs.unsupportedChars) {
-    add(`chars.${u.path}`, stepOfPath(u.path), u.label, unprintableMessage(u.chars));
+    add(`chars.${u.path}`, pageOfPath(u.path), u.label, unprintableMessage(u.chars));
   }
 
   // Evidence slots with no files (never blocks Send, §8.4).
   for (const slot of deriveSlots(state)) {
     if (slot.warnIfEmpty && !inputs.slotFileCounts[slot.id]) {
-      add(`slot.${slot.id}`, 'documents', slot.label, warn.slotEmpty);
+      add(`slot.${slot.id}`, `documents.${slot.id}`, slot.label, warn.slotEmpty);
     }
   }
 
   // Signature date.
-  future(state.signature.signedDate, 'signature.signedDate', 'sign', en.steps.sign.dateLabel);
+  future(
+    state.signature.signedDate,
+    'signature.signedDate',
+    'sign.signature',
+    en.steps.sign.dateLabel,
+  );
 
   // Packet size (§8.5).
   if (inputs.packetBytes != null) {

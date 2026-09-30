@@ -1,32 +1,52 @@
 // App shell: holds the complaint state in memory and drives the wizard
-// (CLAUDE.md §7). No router: the current step is state. Persistence arrives
-// in Phase 5.
+// (CLAUDE.md §7). No router: the current page is state. One question per
+// page; Continue needs the page's answer (or "Skip for now" where offered),
+// and is never disabled. Persistence arrives in Phase 5.
 
 import { useEffect, useMemo, useRef, useState } from 'preact/hooks';
 import { todayIso } from '../core/format/date.ts';
 import { WIN_ANSI } from '../core/pdf/text.ts';
-import { useMediaQuery } from '../core/ui/fields.tsx';
 import { initialState } from '../forms/ct-dob-security-deposit/schema.ts';
+import { normalizeGates } from '../forms/ct-dob-security-deposit/situation.ts';
 import type { StepId } from '../forms/ct-dob-security-deposit/steps/ids.ts';
-import { STEPS } from '../forms/ct-dob-security-deposit/steps/index.ts';
+import { PAGES } from '../forms/ct-dob-security-deposit/steps/index.ts';
 import type { Update } from '../forms/ct-dob-security-deposit/steps/types.ts';
 import { softWarnings } from '../forms/ct-dob-security-deposit/validation.ts';
 import { collectUnsupportedChars } from '../forms/ct-dob-security-deposit/values.ts';
 import en from '../i18n/en.json' with { type: 'json' };
 import { t } from '../i18n/t.ts';
 import { SOURCE_URL } from './config.ts';
-import { progressOf } from './progress.ts';
+import {
+  canContinue,
+  chapterProgress,
+  type EditSession,
+  editAction,
+  newlyPending,
+  nextIndex,
+  pendingIds,
+  prevIndex,
+} from './progress.ts';
 
-const NARROW = '(max-width: 40rem)';
+const ERROR_ID = 'page-error';
+const INTERSTITIAL: StepId = 'review.moreInfoNeeded';
+const indexOf = (id: StepId) =>
+  Math.max(
+    PAGES.findIndex((p) => p.id === id),
+    0,
+  );
+
+/** An edit from Review, and the page it started on (Back from the interstitial). */
+type Edit = EditSession<StepId> & { origin: StepId };
 
 export function App() {
   const [state, setState] = useState(initialState);
-  const [pos, setPos] = useState({ index: 0, sub: 0 });
-  const narrow = useMediaQuery(NARROW);
-  const heading = useRef<HTMLHeadingElement>(null);
+  const [index, setIndex] = useState(0);
+  const [edit, setEdit] = useState<Edit | null>(null);
+  // Bumped on each Continue without an answer, so focus moves to the error again.
+  const [errorTap, setErrorTap] = useState(0);
   const firstRender = useRef(true);
 
-  const update: Update = (recipe) => setState(recipe);
+  const update: Update = (recipe) => setState((s) => normalizeGates(recipe(s)));
   const unsupported = useMemo(() => collectUnsupportedChars(state, WIN_ANSI), [state]);
   const warnings = useMemo(
     () =>
@@ -34,95 +54,158 @@ export function App() {
     [state, unsupported],
   );
 
-  const subCount = (index: number) => STEPS[index]?.subScreens?.(narrow) ?? 1;
-  const step = STEPS[pos.index] ?? STEPS[0];
-  if (!step) throw new Error('No steps');
-  const sub = Math.min(pos.sub, subCount(pos.index) - 1);
-  const isLast = pos.index === STEPS.length - 1;
+  const page = PAGES[index] ?? PAGES[0];
+  if (!page) throw new Error('No pages');
+  const answered = canContinue(page, state);
+  const showError = errorTap > 0 && !answered;
 
-  const next = () =>
-    setPos(({ index }) => {
-      if (sub < subCount(index) - 1) return { index, sub: sub + 1 };
-      return { index: Math.min(index + 1, STEPS.length - 1), sub: 0 };
-    });
-  const back = () =>
-    setPos(({ index }) => {
-      if (sub > 0) return { index, sub: sub - 1 };
-      const prev = Math.max(index - 1, 0);
-      return { index: prev, sub: subCount(prev) - 1 };
-    });
-  const goTo = (id: StepId) =>
-    setPos({
-      index: Math.max(
-        STEPS.findIndex((s) => s.id === id),
-        0,
-      ),
-      sub: 0,
-    });
+  const show = (i: number) => {
+    setErrorTap(0);
+    if (PAGES[i]?.id === 'review') setEdit(null);
+    setIndex(i);
+  };
+  /** During an edit, a page left unanswered never starts a detour later. */
+  const leaving = (session: Edit): Edit =>
+    pendingIds(PAGES, state).has(page.id)
+      ? { ...session, before: new Set([...session.before, page.id]) }
+      : session;
 
-  // §14: step changes move focus to the step heading.
+  const action = edit ? editAction(PAGES, edit, page.id, state) : null;
+
+  /** Continue, Skip, and the Disclaimer's own button (no answer check). */
+  const advance = () => {
+    if (!edit || !action) {
+      show(nextIndex(PAGES, index, state));
+      return;
+    }
+    const session = leaving(edit);
+    const next = editAction(PAGES, session, page.id, state);
+    if (next.to === 'review') show(indexOf('review'));
+    else if (next.to === 'interstitial') {
+      setEdit({ ...session, detour: true });
+      show(indexOf(INTERSTITIAL));
+    } else {
+      setEdit(session);
+      show(indexOf(next.id));
+    }
+  };
+  const primary = () => {
+    if (!answered) {
+      setErrorTap((n) => n + 1);
+      return;
+    }
+    advance();
+  };
+  const back = () => {
+    if (edit && page.id === INTERSTITIAL) {
+      setEdit({ ...edit, detour: false });
+      show(indexOf(edit.origin));
+      return;
+    }
+    if (edit) setEdit(leaving(edit));
+    show(prevIndex(PAGES, index, state));
+  };
+  const secondaryNext = () => {
+    if (edit) setEdit(leaving(edit));
+    show(nextIndex(PAGES, index, state));
+  };
+  const goTo = (id: StepId, opts: { fromReview?: boolean } = {}) => {
+    if (opts.fromReview) {
+      setEdit({ before: pendingIds(PAGES, state), detour: false, origin: id });
+    }
+    show(indexOf(id));
+  };
+
+  // §14: page changes move focus to the page's h1.
   useEffect(() => {
     if (firstRender.current) {
       firstRender.current = false;
       return;
     }
     window.scrollTo(0, 0);
-    heading.current?.focus();
-  }, [pos.index, sub]);
+    document.querySelector<HTMLElement>('main h1')?.focus();
+  }, [index]);
 
-  const progress = progressOf(STEPS, pos.index);
-  const subs = subCount(pos.index);
-  const { Component } = step;
+  // Continue without an answer: focus moves to the error.
+  useEffect(() => {
+    if (errorTap > 0) document.getElementById(ERROR_ID)?.focus();
+  }, [errorTap]);
+
+  const progress = chapterProgress(PAGES, index, state);
+  const chapterTitle = progress ? en.chapters[progress.chapter].title : '';
+  const isLast = nextIndex(PAGES, index, state) === index && !edit;
+  const primaryLabel = !edit
+    ? en.nav.continue
+    : action?.to === 'page'
+      ? en.nav.continue
+      : en.nav.saveAndReturn;
+  const detourCount = edit ? newlyPending(PAGES, edit.before, state).length : 0;
+  const { Component } = page;
 
   return (
     <div class="page">
       <header class="site-header">
         {/* Welcome's h1 is the app name already. */}
-        {pos.index > 0 && <p class="site-name">{en.app.name}</p>}
+        {index > 0 && <p class="site-name">{en.app.name}</p>}
         {progress && (
           <div class="progress">
             <label for="progress-bar">
-              {t(en.nav.progress, { n: progress.n, total: progress.total })}
-              {subs > 1 && (
-                <span class="sub-progress">
-                  {' · '}
-                  {t(en.nav.subProgress, { n: sub + 1, total: subs })}
-                </span>
-              )}
+              {progress.n === null
+                ? chapterTitle
+                : t(en.nav.chapterProgress, {
+                    chapter: chapterTitle,
+                    n: progress.n,
+                    total: progress.total,
+                  })}
             </label>
-            <progress id="progress-bar" value={progress.n} max={progress.total} />
+            <progress id="progress-bar" value={progress.chapterN} max={progress.chapterTotal} />
           </div>
         )}
       </header>
 
       <main class="main">
-        <h1 ref={heading} tabIndex={-1}>
-          {step.title}
-        </h1>
+        {page.title && <h1 tabIndex={-1}>{page.title}</h1>}
         <Component
-          key={step.id}
+          key={page.id}
           state={state}
           update={update}
           goTo={goTo}
-          next={next}
+          next={advance}
           unsupported={unsupported}
           warnings={warnings}
-          sub={sub}
-          narrow={narrow}
+          pageError={showError ? ERROR_ID : null}
+          detourCount={detourCount}
         />
-        {(pos.index > 0 || !step.hideNext) && (
+        {showError && page.answer && (
+          <p id={ERROR_ID} class="page-error" tabIndex={-1}>
+            {page.answer.kind === 'choice' ? en.errors.chooseAnswer : en.errors.enterOrSkip}
+          </p>
+        )}
+        {(index > 0 || !page.hideNext) && (
           <nav class="wizard-nav" aria-label={en.nav.stepsLabel}>
-            {pos.index > 0 && (
+            {index > 0 && (
               <button type="button" class="button button-secondary" onClick={back}>
                 {en.nav.back}
               </button>
             )}
-            {!step.hideNext && !(isLast && sub >= subs - 1) && (
-              <button type="button" class="button button-primary" onClick={next}>
+            {edit && page.id !== INTERSTITIAL && nextIndex(PAGES, index, state) !== index && (
+              <button type="button" class="button button-secondary" onClick={secondaryNext}>
                 {en.nav.next}
               </button>
             )}
+            {!page.hideNext && !isLast && (
+              <button type="button" class="button button-primary" onClick={primary}>
+                {primaryLabel}
+              </button>
+            )}
           </nav>
+        )}
+        {page.answer?.skippable && !answered && (
+          <p class="skip">
+            <button type="button" class="link-button" onClick={advance}>
+              {en.nav.skip}
+            </button>
+          </p>
         )}
       </main>
 

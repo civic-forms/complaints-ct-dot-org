@@ -56,7 +56,7 @@ describe('packet assembly', () => {
       other: [jpeg],
       depositProof: [jpeg, jpeg],
       correspondence: [{ kind: 'pdf', bytes: await sampleAttachmentPdf() }],
-      proofOfAge: [jpeg], // box 2 isn't checked: not derived, so left out
+      proofOfAge: [jpeg], // its complaint type isn't checked: not derived, so left out
     };
     const packet = await buildComplaintPacket(type1NoAnswers, files, { mode: 'preview', assets });
     expect(

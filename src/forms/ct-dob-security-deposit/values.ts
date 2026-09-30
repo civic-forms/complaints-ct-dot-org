@@ -36,9 +36,13 @@ export function textValue(path: TextPath, state: DepositComplaintState): string 
     case 'rental.moveOutDate':
     case 'rental.lastRentPaidDate':
       return formatDateMMDDYY(rental[path.slice('rental.'.length) as 'moveInDate']);
+    case 'rental.otherDepositCents':
+      // "No other deposit" is the user's own answer (§2.2): the form shows $0.00.
+      // A typed amount is kept in state but not rendered (§6.2).
+      if (state.gates.otherDepositPaid === 'no') return formatCents(0);
+      return formatCents(rental.otherDepositCents);
     case 'rental.monthlyRentCents':
     case 'rental.securityDepositCents':
-    case 'rental.otherDepositCents':
       return formatCents(rental[path.slice('rental.'.length) as 'monthlyRentCents']);
     case 'questions.interestPaid.payments':
       return ifYes(qs.interestPaid.answer, () =>

@@ -19,15 +19,44 @@ export interface ShellProps {
   messages?: readonly string[];
   /** Pass for fields that can hold typed text, even when there's nothing to report (null). */
   unprintable?: Unprintable | null;
+  /** The page's "answer to continue" error, when shown (its element id). */
+  errorId?: string | null;
+  /** The label is the page's question: render it as the h1 (one question per page). */
+  heading?: boolean;
 }
 
 function describedBy(id: string, p: ShellProps, extra: string[] = []) {
   const ids = [...extra];
+  if (p.errorId) ids.push(p.errorId);
   if (p.hint) ids.push(`${id}-hint`);
   if (p.help) ids.push(`${id}-help`);
   if (p.messages?.length) ids.push(`${id}-msg`);
   if (p.unprintable) ids.push(`${id}-chars`);
   return ids.length ? ids.join(' ') : undefined;
+}
+
+/** A field's label, or the page's h1 when the field is the page's question. */
+function Label({
+  id,
+  heading,
+  children,
+}: {
+  id: string;
+  heading?: boolean;
+  children: ComponentChildren;
+}) {
+  const label = (
+    <label for={id} class="field-label">
+      {children}
+    </label>
+  );
+  return heading ? (
+    <h1 class="question" tabIndex={-1}>
+      {label}
+    </h1>
+  ) : (
+    label
+  );
 }
 
 function Below({ id, hint, help, messages, unprintable }: ShellProps & { id: string }) {
@@ -91,6 +120,7 @@ interface InputAttrs {
   autoCapitalize?: 'off' | 'none' | 'on' | 'sentences' | 'words' | 'characters';
   pattern?: string;
   spellcheck?: boolean;
+  name?: string;
 }
 
 export interface TextFieldProps extends ShellProps, InputAttrs {
@@ -101,6 +131,8 @@ export interface TextFieldProps extends ShellProps, InputAttrs {
   /** Applied on every keystroke; the input shows the normalized value. */
   normalize?: (value: string) => string;
   required?: boolean;
+  /** Suggestions shown as a <datalist>; free text is still allowed. */
+  suggestions?: readonly string[];
 }
 
 export function TextField(props: TextFieldProps) {
@@ -115,17 +147,21 @@ export function TextField(props: TextFieldProps) {
     help,
     messages,
     unprintable,
+    errorId,
+    heading,
+    suggestions,
     ...attrs
   } = props;
   return (
     <div class="field">
-      <label for={id} class="field-label">
+      <Label id={id} heading={heading}>
         {label}
-      </label>
+      </Label>
       <input
         id={id}
         class="input"
         value={value}
+        list={suggestions ? `${id}-list` : undefined}
         aria-required={required || undefined}
         aria-describedby={describedBy(id, props)}
         {...attrs}
@@ -138,6 +174,13 @@ export function TextField(props: TextFieldProps) {
           onInput(next);
         }}
       />
+      {suggestions && (
+        <datalist id={`${id}-list`}>
+          {suggestions.map((option) => (
+            <option key={option} value={option} />
+          ))}
+        </datalist>
+      )}
       <Below id={id} hint={hint} help={help} messages={messages} unprintable={unprintable} />
     </div>
   );
@@ -154,12 +197,12 @@ export interface TextAreaProps extends ShellProps {
 }
 
 export function TextArea(props: TextAreaProps) {
-  const { id, label, value, onInput, rows = 8, footer } = props;
+  const { id, label, value, onInput, rows = 8, footer, heading } = props;
   return (
     <div class="field">
-      <label for={id} class="field-label">
+      <Label id={id} heading={heading}>
         {label}
-      </label>
+      </Label>
       <textarea
         id={id}
         class="input textarea"
@@ -200,9 +243,9 @@ export function MoneyField(props: MoneyFieldProps) {
   const shell = { ...props, messages };
   return (
     <div class="field">
-      <label for={id} class="field-label">
+      <Label id={id} heading={props.heading}>
         {label}
-      </label>
+      </Label>
       <input
         id={id}
         class="input input-money"
@@ -238,9 +281,9 @@ export function DateField(props: DateFieldProps) {
   const { id, label, value, onChange } = props;
   return (
     <div class="field">
-      <label for={id} class="field-label">
+      <Label id={id} heading={props.heading}>
         {label}
-      </label>
+      </Label>
       <input
         id={id}
         class="input input-date"
@@ -265,16 +308,32 @@ export interface ChoiceGroupProps<T extends string> extends ShellProps {
   options: readonly ChoiceOption<T>[];
   value: T | null;
   onChange: (value: T) => void;
+  /** Content the question is about (e.g. text quoted from a form), shown between it and the options. */
+  description?: ComponentChildren;
   /** Follow-up content, shown directly under the options. */
   children?: ComponentChildren;
 }
 
 /** Native radios in a fieldset (YES/NO, NOT SURE, Residential/Vacation). */
 export function ChoiceGroup<T extends string>(props: ChoiceGroupProps<T>) {
-  const { name, legend, options, value, onChange, children } = props;
+  const { name, legend, options, value, onChange, children, description } = props;
+  const extra = description ? [`${name}-desc`] : [];
   return (
-    <fieldset class="field choice" aria-describedby={describedBy(name, props)}>
-      <legend class="field-label">{legend}</legend>
+    <fieldset class="field choice" aria-describedby={describedBy(name, props, extra)}>
+      <legend class="field-label">
+        {props.heading ? (
+          <h1 class="question" tabIndex={-1}>
+            {legend}
+          </h1>
+        ) : (
+          legend
+        )}
+      </legend>
+      {description && (
+        <div id={`${name}-desc`} class="choice-description">
+          {description}
+        </div>
+      )}
       <Below {...props} id={name} />
       <div class="choice-options">
         {options.map((o) => (
@@ -390,19 +449,6 @@ export function Notice({
       )}
     </div>
   );
-}
-
-/** Tracks a CSS media query. */
-export function useMediaQuery(query: string): boolean {
-  const [matches, setMatches] = useState(() => window.matchMedia(query).matches);
-  useEffect(() => {
-    const mql = window.matchMedia(query);
-    const onChange = () => setMatches(mql.matches);
-    onChange();
-    mql.addEventListener('change', onChange);
-    return () => mql.removeEventListener('change', onChange);
-  }, [query]);
-  return matches;
 }
 
 /** An external link that opens in a new tab (§12). */

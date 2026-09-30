@@ -1,3 +1,4 @@
+import { PDFDocument } from 'pdf-lib';
 import { describe, expect, it } from 'vitest';
 import { WIN_ANSI } from '../../src/core/pdf/text.ts';
 import { DISCLAIMER_VERSION } from '../../src/forms/ct-dob-security-deposit/config.ts';
@@ -5,6 +6,7 @@ import {
   acceptDisclaimer,
   isDisclaimerAccepted,
 } from '../../src/forms/ct-dob-security-deposit/disclaimer.ts';
+import { TEXT_FIELDS } from '../../src/forms/ct-dob-security-deposit/fieldMap.ts';
 import {
   buildComplaintPacket,
   DisclaimerNotAcceptedError,
@@ -13,13 +15,17 @@ import {
   type DepositComplaintState,
   initialState,
 } from '../../src/forms/ct-dob-security-deposit/schema.ts';
+import { STEP_IDS } from '../../src/forms/ct-dob-security-deposit/steps/ids.ts';
 import {
   canSend,
   type Issue,
   missingRequired,
   softWarnings,
 } from '../../src/forms/ct-dob-security-deposit/validation.ts';
-import { collectUnsupportedChars } from '../../src/forms/ct-dob-security-deposit/values.ts';
+import {
+  collectUnsupportedChars,
+  textValue,
+} from '../../src/forms/ct-dob-security-deposit/values.ts';
 import { makeState, type1NoAnswers, type23AllYes } from '../fixtures/states.ts';
 import { loadAssets } from '../helpers/assets.ts';
 import { pngDataUrl, signaturePng } from '../helpers/png.ts';
@@ -41,19 +47,19 @@ const ready = (state: DepositComplaintState): DepositComplaintState => ({
 describe('hard requirements (§6.3)', () => {
   it('lists everything for a blank form, each with its step', () => {
     expect(missingRequired(initialState()).map((i) => [i.id, i.step])).toEqual([
-      ['complaintTypes', 'situation'],
-      ['tenant.name', 'aboutYou'],
-      ['tenant.street', 'aboutYou'],
-      ['tenant.city', 'aboutYou'],
-      ['tenant.state', 'aboutYou'],
-      ['tenant.zip', 'aboutYou'],
-      ['landlord.name', 'landlord'],
-      ['rental.unitStreet', 'rental'],
-      ['rental.city', 'rental'],
-      ['rental.zip', 'rental'],
+      ['complaintTypes', 'situation.movedOut'],
+      ['tenant.name', 'aboutYou.name'],
+      ['tenant.street', 'aboutYou.address'],
+      ['tenant.city', 'aboutYou.address'],
+      ['tenant.state', 'aboutYou.address'],
+      ['tenant.zip', 'aboutYou.address'],
+      ['landlord.name', 'landlord.name'],
+      ['rental.unitStreet', 'rental.address'],
+      ['rental.city', 'rental.address'],
+      ['rental.zip', 'rental.address'],
       ['disclaimer', 'disclaimer'],
-      ['statementsRead', 'sign'],
-      ['signature', 'sign'],
+      ['statementsRead', 'sign.statements'],
+      ['signature', 'sign.signature'],
     ]);
     expect(canSend(initialState())).toBe(false);
   });
@@ -138,22 +144,10 @@ describe('soft warnings (§6.3)', () => {
     expect(w.some((i) => i.id === 'rental.housingComplexName')).toBe(false);
   });
 
-  it('notes box 1 with boxes 2–4, and boxes 2 and 3 together', () => {
-    const both = makeState({
-      complaintTypes: {
-        formerTenantDepositNotReturned: true,
-        currentTenant62PlusExcessOverOneMonth: true,
-        currentTenantUnder62ExcessOverTwoMonths: true,
-      },
-    });
-    const w = warnings(both);
-    expect(ids(w)).toContain('box1WithCurrent');
-    expect(ids(w)).toContain('box2And3');
-    expect(w.find((i) => i.id === 'box1WithCurrent')).toMatchObject({
-      step: 'situation',
-      inline: true,
-    });
-    expect(ids(warnings(type1NoAnswers))).not.toContain('box1WithCurrent');
+  it('points every issue at a real page', () => {
+    const all = [...missingRequired(initialState()), ...warnings(initialState())];
+    expect(all.length).toBeGreaterThan(0);
+    for (const issue of all) expect(STEP_IDS).toContain(issue.step);
   });
 
   it('flags move-out before move-in and future dates', () => {
@@ -196,7 +190,11 @@ describe('soft warnings (§6.3)', () => {
   it('flags empty evidence slots except the optional ones', () => {
     const w = warnings(type1NoAnswers).filter((i) => i.id.startsWith('slot.'));
     expect(ids(w)).toEqual(['slot.depositProof', 'slot.correspondence', 'slot.forwardingAddress']);
-    expect(w.every((i) => i.step === 'documents')).toBe(true);
+    expect(w.map((i) => i.step)).toEqual([
+      'documents.depositProof',
+      'documents.correspondence',
+      'documents.forwardingAddress',
+    ]);
     const filled = softWarnings(type1NoAnswers, {
       unsupportedChars: [],
       slotFileCounts: { depositProof: 1, correspondence: 2, forwardingAddress: 1 },
@@ -211,7 +209,7 @@ describe('soft warnings (§6.3)', () => {
     expect(w).toEqual([
       {
         id: 'chars.landlord.city',
-        step: 'landlord',
+        step: 'landlord.address',
         label: 'City/Town',
         message: "The form can't print 'ł'. Please use a plain letter instead.",
       },
@@ -230,25 +228,43 @@ describe('soft warnings (§6.3)', () => {
 });
 
 describe('empty Move Out Date', () => {
-  const types = (on: Partial<DepositComplaintState['complaintTypes']>) =>
-    makeState({ complaintTypes: on, rental: { moveOutDate: null } });
+  const movedOut = (answer: 'yes' | 'no' | null) =>
+    makeState({ gates: { movedOut: answer }, rental: { moveOutDate: null } });
   const flagged = (state: DepositComplaintState) =>
     ids(warnings(state)).includes('rental.moveOutDate');
 
-  it('is noted when box 1 is checked or no type is chosen yet', () => {
+  it('is noted unless the tenant still lives there', () => {
     expect(flagged(initialState())).toBe(true);
-    expect(flagged(types({ formerTenantDepositNotReturned: true }))).toBe(true);
-    expect(
-      flagged(types({ formerTenantDepositNotReturned: true, currentTenantNoEscrowInfo: true })),
-    ).toBe(true);
+    expect(flagged(movedOut(null))).toBe(true);
+    expect(flagged(movedOut('yes'))).toBe(true);
+    expect(flagged(movedOut('no'))).toBe(false);
+  });
+});
+
+describe('other deposit', () => {
+  const state = (paid: 'yes' | 'no' | null, cents: number | null) =>
+    makeState({ gates: { otherDepositPaid: paid }, rental: { otherDepositCents: cents } });
+
+  it('shows $0.00 on No, with no empty warning, keeping any typed amount', () => {
+    const no = state('no', 12500);
+    expect(textValue('rental.otherDepositCents', no)).toBe('$0.00');
+    expect(no.rental.otherDepositCents).toBe(12500);
+    expect(ids(warnings(no))).not.toContain('rental.otherDepositCents');
   });
 
-  it('is not noted when only boxes 2–4 are checked', () => {
-    expect(flagged(types({ currentTenant62PlusExcessOverOneMonth: true }))).toBe(false);
-    expect(
-      flagged(
-        types({ currentTenantUnder62ExcessOverTwoMonths: true, currentTenantNoEscrowInfo: true }),
-      ),
-    ).toBe(false);
+  it('shows the typed amount on Yes, and notes an empty one', () => {
+    expect(textValue('rental.otherDepositCents', state('yes', 12500))).toBe('$125.00');
+    expect(ids(warnings(state('yes', null)))).toContain('rental.otherDepositCents');
+  });
+
+  it('prints $0.00 in the form field on No', async () => {
+    const packet = await buildComplaintPacket(
+      state('no', 12500),
+      {},
+      { mode: 'preview', assets: loadAssets(), flatten: false },
+    );
+    const form = (await PDFDocument.load(packet.bytes)).getForm();
+    const entry = TEXT_FIELDS.find((f) => f.path === 'rental.otherDepositCents');
+    expect(form.getTextField(entry?.field ?? '').getText()).toBe('$0.00');
   });
 });

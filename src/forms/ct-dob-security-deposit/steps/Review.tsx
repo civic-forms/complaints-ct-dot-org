@@ -1,19 +1,23 @@
-// Step 11 (CLAUDE.md §7): summary grouped by step with Edit links, the
-// missing-required list (§6.3), the warnings list, and the unsigned preview PDF,
-// built on entering once the disclaimer is accepted.
+// Review (CLAUDE.md §7): the summary grouped by chapter, with an Edit link on
+// every row that opens that question's page; the missing-required list
+// (§6.3); the warnings list; and the unsigned preview PDF, built on entering
+// once the disclaimer is accepted. App-only answers aren't shown: this is what
+// goes on the form.
 
 import type { ComponentChildren } from 'preact';
 import { useEffect, useState } from 'preact/hooks';
 import { createObjectUrl, revokeObjectUrl } from '../../../core/blob-urls.ts';
 import { todayIso } from '../../../core/format/date.ts';
 import en from '../../../i18n/en.json' with { type: 'json' };
+import { t } from '../../../i18n/t.ts';
 import { isDisclaimerAccepted } from '../disclaimer.ts';
 import type { TextPath } from '../fieldMap.ts';
 import { COMPLAINT_TYPES, type DepositComplaintState, type YesNoNotSure } from '../schema.ts';
 import { type Issue, missingRequired, softWarnings } from '../validation.ts';
 import { textValue } from '../values.ts';
 import verbatim from '../verbatim.json' with { type: 'json' };
-import { STEP_IDS, type StepId } from './ids.ts';
+import { CHAPTER_IDS, type ChapterId, type StepId } from './ids.ts';
+import { type FormPath, pageOfPath, specOf } from './pages.ts';
 import type { StepProps } from './types.ts';
 
 const r = en.steps.review;
@@ -28,9 +32,11 @@ type Preview =
 interface Row {
   label: string;
   value: ComponentChildren;
+  /** The page that asks for it. */
+  page: StepId;
 }
 
-const stepTitle = (id: StepId) => en.steps[id].title;
+const chapterTitle = (id: ChapterId) => en.chapters[id].title;
 
 function answer(value: YesNoNotSure): string {
   if (value === 'yes') return opt.yes;
@@ -39,10 +45,16 @@ function answer(value: YesNoNotSure): string {
   return r.notAnswered;
 }
 
-function summary(state: DepositComplaintState): { step: StepId; rows: Row[] }[] {
+function summary(state: DepositComplaintState): { chapter: ChapterId; rows: Row[] }[] {
   const text = (path: TextPath, label: string): Row => ({
     label,
     value: textValue(path, state) || <span class="muted">{r.empty}</span>,
+    page: pageOfPath(path),
+  });
+  const choice = (path: FormPath, label: string, value: ComponentChildren): Row => ({
+    label,
+    value,
+    page: pageOfPath(path),
   });
   const person = (who: 'tenant' | 'landlord') =>
     (['name', 'street', 'city', 'state', 'zip', 'daytimePhone', 'email'] as const).map((key) =>
@@ -53,13 +65,13 @@ function summary(state: DepositComplaintState): { step: StepId; rows: Row[] }[] 
   const terms = [rental.terms.lease && opt.lease, rental.terms.monthToMonth && opt.monthToMonth]
     .filter(Boolean)
     .join(', ');
-  const yesNo = (label: string, value: YesNoNotSure, followUp?: Row): Row[] => [
-    { label, value: answer(value) },
+  const yesNo = (path: FormPath, label: string, value: YesNoNotSure, followUp?: Row): Row[] => [
+    choice(path, label, answer(value)),
     ...(value === 'yes' && followUp ? [followUp] : []),
   ];
   return [
     {
-      step: 'situation',
+      chapter: 'situation',
       rows: [
         {
           label: verbatim.complaintIntro,
@@ -74,62 +86,77 @@ function summary(state: DepositComplaintState): { step: StepId; rows: Row[] }[] 
           ) : (
             <span class="muted">{r.none}</span>
           ),
+          page: 'situation.movedOut',
         },
       ],
     },
-    { step: 'aboutYou', rows: person('tenant') },
-    { step: 'landlord', rows: person('landlord') },
     {
-      step: 'rental',
-      rows: [
-        text('rental.unitStreet', labels.rental.unitStreet),
-        text('rental.housingComplexName', labels.rental.housingComplexName),
-        text('rental.city', labels.rental.city),
-        text('rental.state', labels.rental.state),
-        text('rental.zip', labels.rental.zip),
-        {
-          label: labels.rental.typeOfRental,
-          value: rental.typeOfRental ? opt[rental.typeOfRental] : r.notAnswered,
-        },
-        { label: labels.rental.terms, value: terms || <span class="muted">{r.none}</span> },
-        text('rental.moveInDate', labels.rental.moveInDate),
-        text('rental.moveOutDate', labels.rental.moveOutDate),
-      ],
-    },
-    {
-      step: 'money',
+      chapter: 'deposit',
       rows: [
         text('rental.monthlyRentCents', labels.rental.monthlyRentCents),
-        text('rental.lastRentPaidDate', labels.rental.lastRentPaidDate),
         text('rental.securityDepositCents', labels.rental.securityDepositCents),
         text('rental.otherDepositCents', labels.rental.otherDepositCents),
         ...yesNo(
+          'yesNo.depositReturned',
           q.depositReturned,
           qs.depositReturned.answer,
           text('questions.depositReturned.amountCents', en.fields.questions.depositReturnedAmount),
         ),
         ...(qs.depositReturned.answer === 'yes'
-          ? yesNo(q.checkCashed, qs.depositReturned.checkCashed)
+          ? yesNo('yesNo.checkCashed', q.checkCashed, qs.depositReturned.checkCashed)
           : []),
         ...yesNo(
+          'yesNo.interestPaid',
           q.interestPaid,
           qs.interestPaid.answer,
           text('questions.interestPaid.payments', q.interestPaid),
         ),
       ],
     },
+    { chapter: 'aboutYou', rows: person('tenant') },
+    { chapter: 'landlord', rows: person('landlord') },
     {
-      step: 'moreQuestions',
+      chapter: 'rental',
       rows: [
-        ...yesNo(q.cashForKeys, qs.cashForKeys.answer),
-        ...yesNo(q.roommates, qs.roommates.answer, text('questions.roommates.names', q.roommates)),
+        text('rental.unitStreet', labels.rental.unitStreet),
+        text('rental.city', labels.rental.city),
+        text('rental.state', labels.rental.state),
+        text('rental.zip', labels.rental.zip),
+        text('rental.housingComplexName', labels.rental.housingComplexName),
+        choice(
+          'typeOfRental',
+          labels.rental.typeOfRental,
+          rental.typeOfRental ? opt[rental.typeOfRental] : r.notAnswered,
+        ),
+        choice('terms.lease', labels.rental.terms, terms || <span class="muted">{r.none}</span>),
+        text('rental.moveInDate', labels.rental.moveInDate),
+        text('rental.moveOutDate', labels.rental.moveOutDate),
+        text('rental.lastRentPaidDate', labels.rental.lastRentPaidDate),
+      ],
+    },
+    {
+      chapter: 'moreQuestions',
+      rows: [
+        choice('cashForKeys', q.cashForKeys, answer(qs.cashForKeys.answer)),
         ...yesNo(
+          'yesNo.roommates',
+          q.roommates,
+          qs.roommates.answer,
+          text('questions.roommates.names', q.roommates),
+        ),
+        ...yesNo(
+          'yesNo.landlordOtherProperties',
           q.landlordOtherProperties,
           qs.landlordOtherProperties.answer,
           text('questions.landlordOtherProperties.addresses', q.landlordOtherProperties),
         ),
-        ...yesNo(q.correspondenceReceived, qs.correspondenceReceived.answer),
         ...yesNo(
+          'yesNo.correspondenceReceived',
+          q.correspondenceReceived,
+          qs.correspondenceReceived.answer,
+        ),
+        ...yesNo(
+          'yesNo.courtAction',
           q.courtAction,
           qs.courtAction.answer,
           text('questions.courtAction.docketNumber', en.fields.questions.docketNumber),
@@ -137,7 +164,7 @@ function summary(state: DepositComplaintState): { step: StepId; rows: Row[] }[] 
       ],
     },
     {
-      step: 'comments',
+      chapter: 'comments',
       rows: [
         {
           label: q.additionalComments,
@@ -146,40 +173,55 @@ function summary(state: DepositComplaintState): { step: StepId; rows: Row[] }[] 
           ) : (
             <span class="muted">{r.empty}</span>
           ),
+          page: 'comments',
         },
       ],
     },
   ];
 }
 
-function IssueList({ issues, goTo }: { issues: readonly Issue[]; goTo: (id: StepId) => void }) {
-  const byStep = STEP_IDS.map((step) => ({
-    step,
-    items: issues.filter((i) => i.step === step),
+type GoTo = StepProps['goTo'];
+
+function EditLink({ page, what, goTo }: { page: StepId; what: string; goTo: GoTo }) {
+  return (
+    <button
+      type="button"
+      class="link-button edit-link"
+      onClick={() => goTo(page, { fromReview: true })}
+    >
+      {en.nav.edit}
+      <span class="visually-hidden"> {what}</span>
+    </button>
+  );
+}
+
+function IssueList({ issues, goTo }: { issues: readonly Issue[]; goTo: GoTo }) {
+  const byChapter = CHAPTER_IDS.map((chapter) => ({
+    chapter,
+    items: issues.filter((i) => specOf(i.step).chapter === chapter),
   })).filter((g) => g.items.length > 0);
   return (
     <>
-      {byStep.map(({ step, items }) => (
-        <div key={step} class="issue-group">
-          <h3>
-            {stepTitle(step)}{' '}
-            <button type="button" class="link-button" onClick={() => goTo(step)}>
-              {en.nav.edit}
-              <span class="visually-hidden"> {stepTitle(step)}</span>
-            </button>
-          </h3>
+      {byChapter.map(({ chapter, items }) => (
+        <div key={chapter} class="issue-group">
+          <h3>{chapterTitle(chapter)}</h3>
           <ul>
-            {items.map((issue) => (
-              <li key={`${issue.id}:${issue.message}`}>
-                {issue.label && issue.message ? (
+            {items.map((issue) => {
+              const text =
+                issue.label && issue.message ? (
                   <>
                     <span class="issue-label">{issue.label}:</span> {issue.message}
                   </>
                 ) : (
                   issue.label || issue.message
-                )}
-              </li>
-            ))}
+                );
+              return (
+                <li key={`${issue.id}:${issue.message}`}>
+                  {text}{' '}
+                  <EditLink page={issue.step} what={issue.label || issue.message} goTo={goTo} />
+                </li>
+              );
+            })}
           </ul>
         </div>
       ))}
@@ -233,7 +275,11 @@ export function Review({ state, goTo, unsupported }: StepProps) {
         {!accepted && (
           <p>
             {r.previewNeedsDisclaimer}{' '}
-            <button type="button" class="link-button" onClick={() => goTo('disclaimer')}>
+            <button
+              type="button"
+              class="link-button"
+              onClick={() => goTo('disclaimer', { fromReview: true })}
+            >
               {r.previewNeedsDisclaimerLink}
             </button>
           </p>
@@ -272,19 +318,15 @@ export function Review({ state, goTo, unsupported }: StepProps) {
         </section>
       )}
 
-      {summary(state).map(({ step, rows }) => (
-        <section key={step} class="section summary" aria-labelledby={`summary-${step}`}>
-          <h2 id={`summary-${step}`}>
-            {stepTitle(step)}{' '}
-            <button type="button" class="link-button" onClick={() => goTo(step)}>
-              {en.nav.edit}
-              <span class="visually-hidden"> {stepTitle(step)}</span>
-            </button>
-          </h2>
+      {summary(state).map(({ chapter, rows }) => (
+        <section key={chapter} class="section summary" aria-labelledby={`summary-${chapter}`}>
+          <h2 id={`summary-${chapter}`}>{chapterTitle(chapter)}</h2>
           <dl>
             {rows.map((row, i) => (
               <div key={i} class="summary-row">
-                <dt>{row.label}</dt>
+                <dt>
+                  {row.label} <EditLink page={row.page} what={row.label} goTo={goTo} />
+                </dt>
                 <dd>{row.value}</dd>
               </div>
             ))}
@@ -292,5 +334,15 @@ export function Review({ state, goTo, unsupported }: StepProps) {
         </section>
       ))}
     </>
+  );
+}
+
+/** The edit detour's interstitial: names the change, never what the answers mean. */
+export function MoreInfoNeeded({ detourCount }: StepProps) {
+  const p = en.pages;
+  return (
+    <p class="lead">
+      {detourCount === 1 ? p.moreInfoNeededOne : t(p.moreInfoNeededOther, { n: detourCount })}
+    </p>
   );
 }

@@ -1,4 +1,4 @@
-// Step 9: Additional Comments. Only what the user types; a neutral prompt, no
+// Additional Comments. Only what the user types; a neutral prompt, no
 // examples or sentence starters (CLAUDE.md §2.2).
 
 import { TextArea } from '../../../core/ui/fields.tsx';

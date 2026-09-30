@@ -1,117 +1,160 @@
-// Step 7: Cash for Keys, roommates, other properties, correspondence, court
-// action. On narrow screens, one question per sub-screen (CLAUDE.md §7).
+// More questions (CLAUDE.md §7): the rest of page 1's YES/NO questions, each
+// on its own page, with each follow-up on the page after it.
 
 import { ChoiceGroup, TextField, TextList } from '../../../core/ui/fields.tsx';
 import en from '../../../i18n/en.json' with { type: 'json' };
 import { t } from '../../../i18n/t.ts';
 import verbatim from '../verbatim.json' with { type: 'json' };
+import { formYesNo } from './Deposit.tsx';
 import { kit, onTheForm } from './kit.ts';
 import type { StepProps } from './types.ts';
-import { YES_NO, YES_NO_NOT_SURE } from './yesNo.ts';
+import { FORM_YES_NO, FORM_YES_NO_NOT_SURE } from './yesNo.ts';
 
 const f = en.fields.questions;
 const q = verbatim.page1Labels;
 
-export const MORE_QUESTIONS_COUNT = 5;
-
-export function MoreQuestions(props: StepProps) {
+export function CashForKeys(props: StepProps) {
   const k = kit(props);
-  const qs = props.state.questions;
-  const list = (n: number, template: string) => t(template, { n });
-  const questions = [
+  return (
     <ChoiceGroup
-      key="cashForKeys"
       name="q-cashForKeys"
       legend={f.cashForKeys}
+      heading={true}
       hint={onTheForm(q.cashForKeys)}
       help={
         <>
           <strong>{f.cashForKeysTerm}:</strong> {f.cashForKeysDefinition}
         </>
       }
-      options={YES_NO_NOT_SURE}
-      value={qs.cashForKeys.answer}
+      options={FORM_YES_NO_NOT_SURE}
+      value={props.state.questions.cashForKeys.answer}
       onChange={(answer) => k.patchQuestion('cashForKeys', { answer })}
-    />,
+      errorId={k.errorId}
+    />
+  );
+}
+
+export const Roommates = formYesNo(
+  'q-roommates',
+  f.roommates,
+  q.roommates,
+  (s) => s.questions.roommates.answer,
+  (k, answer) => k.patchQuestion('roommates', { answer }),
+);
+export const OtherProperties = formYesNo(
+  'q-landlordOtherProperties',
+  f.landlordOtherProperties,
+  q.landlordOtherProperties,
+  (s) => s.questions.landlordOtherProperties.answer,
+  (k, answer) => k.patchQuestion('landlordOtherProperties', { answer }),
+);
+export const CourtAction = formYesNo(
+  'q-courtAction',
+  f.courtAction,
+  q.courtAction,
+  (s) => s.questions.courtAction.answer,
+  (k, answer) => k.patchQuestion('courtAction', { answer }),
+);
+
+export function Correspondence(props: StepProps) {
+  const k = kit(props);
+  const answer = props.state.questions.correspondenceReceived.answer;
+  return (
     <ChoiceGroup
-      key="roommates"
-      name="q-roommates"
-      legend={f.roommates}
-      hint={onTheForm(q.roommates)}
-      options={YES_NO}
-      value={qs.roommates.answer}
-      onChange={(answer) => k.patchQuestion('roommates', { answer })}
-    >
-      {qs.roommates.answer === 'yes' && (
-        <TextList
-          id="q-roommates-names"
-          items={qs.roommates.names}
-          onChange={(names) => k.patchQuestion('roommates', { names })}
-          itemLabel={(n) => list(n, f.roommateName)}
-          addLabel={en.common.addAnother}
-          removeLabel={(n) => t(en.common.removeItem, { item: list(n, f.roommateName) })}
-          autoComplete="off"
-          unprintable={k.chars('questions.roommates.names')}
-        />
-      )}
-    </ChoiceGroup>,
-    <ChoiceGroup
-      key="landlordOtherProperties"
-      name="q-landlordOtherProperties"
-      legend={f.landlordOtherProperties}
-      hint={onTheForm(q.landlordOtherProperties)}
-      options={YES_NO}
-      value={qs.landlordOtherProperties.answer}
-      onChange={(answer) => k.patchQuestion('landlordOtherProperties', { answer })}
-    >
-      {qs.landlordOtherProperties.answer === 'yes' && (
-        <TextList
-          id="q-properties"
-          items={qs.landlordOtherProperties.addresses}
-          onChange={(addresses) => k.patchQuestion('landlordOtherProperties', { addresses })}
-          itemLabel={(n) => list(n, f.propertyAddress)}
-          addLabel={en.common.addAnother}
-          removeLabel={(n) => t(en.common.removeItem, { item: list(n, f.propertyAddress) })}
-          autoComplete="off"
-          unprintable={k.chars('questions.landlordOtherProperties.addresses')}
-        />
-      )}
-    </ChoiceGroup>,
-    <ChoiceGroup
-      key="correspondenceReceived"
       name="q-correspondenceReceived"
       legend={f.correspondenceReceived}
+      heading={true}
       hint={onTheForm(q.correspondenceReceived)}
-      options={YES_NO}
-      value={qs.correspondenceReceived.answer}
-      onChange={(answer) => k.patchQuestion('correspondenceReceived', { answer })}
+      options={FORM_YES_NO}
+      value={answer}
+      onChange={(value) => k.patchQuestion('correspondenceReceived', { answer: value })}
+      errorId={k.errorId}
     >
-      {qs.correspondenceReceived.answer === 'yes' && (
-        <p class="field-help">{f.correspondenceNote}</p>
-      )}
-    </ChoiceGroup>,
-    <ChoiceGroup
-      key="courtAction"
-      name="q-courtAction"
-      legend={f.courtAction}
-      hint={onTheForm(q.courtAction)}
-      options={YES_NO}
-      value={qs.courtAction.answer}
-      onChange={(answer) => k.patchQuestion('courtAction', { answer })}
-    >
-      {qs.courtAction.answer === 'yes' && (
-        <TextField
-          id="q-courtAction-docket"
-          label={f.docketNumber}
-          help={f.docketHelp}
-          value={qs.courtAction.docketNumber}
-          onInput={(docketNumber) => k.patchQuestion('courtAction', { docketNumber })}
+      {answer === 'yes' && <p class="field-help">{f.correspondenceNote}</p>}
+    </ChoiceGroup>
+  );
+}
+
+function list(
+  id: string,
+  question: string,
+  label: string,
+  itemTemplate: string,
+  key: 'roommates' | 'landlordOtherProperties',
+) {
+  return function ListPage(props: StepProps) {
+    const k = kit(props);
+    const items =
+      key === 'roommates'
+        ? props.state.questions.roommates.names
+        : props.state.questions.landlordOtherProperties.addresses;
+    const set = (next: string[]) =>
+      key === 'roommates'
+        ? k.patchQuestion('roommates', { names: next })
+        : k.patchQuestion('landlordOtherProperties', { addresses: next });
+    const item = (n: number) => t(itemTemplate, { n });
+    return (
+      <fieldset
+        class="field"
+        aria-describedby={[`${id}-hint`, k.errorId].filter(Boolean).join(' ')}
+      >
+        <legend class="field-label">
+          <h1 class="question" tabIndex={-1}>
+            {question}
+          </h1>
+        </legend>
+        <p id={`${id}-hint`} class="field-hint">
+          {onTheForm(label)}
+        </p>
+        <TextList
+          id={id}
+          items={items}
+          onChange={set}
+          itemLabel={item}
+          addLabel={en.common.addAnother}
+          removeLabel={(n) => t(en.common.removeItem, { item: item(n) })}
           autoComplete="off"
-          spellcheck={false}
-          unprintable={k.chars('questions.courtAction.docketNumber')}
+          unprintable={k.chars(
+            key === 'roommates'
+              ? 'questions.roommates.names'
+              : 'questions.landlordOtherProperties.addresses',
+          )}
         />
-      )}
-    </ChoiceGroup>,
-  ];
-  return <>{props.narrow ? questions[Math.min(props.sub, questions.length - 1)] : questions}</>;
+      </fieldset>
+    );
+  };
+}
+
+export const RoommateNames = list(
+  'q-roommates-names',
+  en.pages.roommateNames,
+  q.roommates,
+  f.roommateName,
+  'roommates',
+);
+export const PropertyAddresses = list(
+  'q-properties',
+  en.pages.propertyAddresses,
+  q.landlordOtherProperties,
+  f.propertyAddress,
+  'landlordOtherProperties',
+);
+
+export function DocketNumber(props: StepProps) {
+  const k = kit(props);
+  return (
+    <TextField
+      id="q-courtAction-docket"
+      label={en.pages.docketNumber}
+      heading={true}
+      hint={onTheForm(q.courtAction)}
+      help={f.docketHelp}
+      value={props.state.questions.courtAction.docketNumber}
+      onInput={(docketNumber) => k.patchQuestion('courtAction', { docketNumber })}
+      autoComplete="off"
+      spellcheck={false}
+      unprintable={k.chars('questions.courtAction.docketNumber')}
+      errorId={k.errorId}
+    />
+  );
 }
