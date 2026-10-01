@@ -48,6 +48,8 @@
   --color-info-bg: #eef3f8;
   --color-info-border: #6d8fb0;
   --color-focus: #1a5fb4;
+  --color-error: #b3261e;
+  --color-error-bg: #fdecea;
 }
 
 @media (prefers-color-scheme: dark) {
@@ -67,5 +69,7 @@
     --color-info-bg: #1c2a38;
     --color-info-border: #6d8fb0;
     --color-focus: #8cb8ff;
+    --color-error: #ffb4ab;
+    --color-error-bg: #3b1d1a;
   }
 }

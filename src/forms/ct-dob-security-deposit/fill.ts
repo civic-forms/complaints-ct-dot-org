@@ -20,7 +20,7 @@ import {
   YES_NO_FIELDS,
   YES_NO_ON_VALUES,
   type YesNoQuestion,
-} from './fieldMap.ts';
+} from './field-map.ts';
 import { COMPLAINT_TYPES, type DepositComplaintState, type YesNo } from './schema.ts';
 import { sanitizedTextFields, type UnsupportedChars, unsupportedOf } from './values.ts';
 

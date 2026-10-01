@@ -430,10 +430,6 @@ h1:focus-visible {
   color: var(--color-text-muted);
 }
 
-.box-number {
-  font-weight: 600;
-}
-
 .attestation {
   margin-top: var(--space-5);
   font-weight: 600;
@@ -456,7 +452,90 @@ h1:focus-visible {
   margin-bottom: var(--space-2);
 }
 
+/* One question per page */
+
+.question {
+  margin: var(--space-4) 0 var(--space-2);
+  font-size: var(--text-2xl);
+}
+
+.question .field-label {
+  font-weight: inherit;
+  margin: 0;
+}
+
+legend.field-label:has(.question) {
+  margin-bottom: var(--space-2);
+}
+
+.page-error {
+  margin: var(--space-4) 0 0;
+  padding: var(--space-2) var(--space-3);
+  border-left: 4px solid var(--color-error);
+  background: var(--color-error-bg);
+  color: var(--color-text);
+  font-weight: 600;
+}
+
+.page-error:focus {
+  outline: var(--focus-width) solid var(--color-focus);
+  outline-offset: 2px;
+}
+
+.skip {
+  margin-top: var(--space-3);
+  text-align: right;
+}
+
+.form-text {
+  margin: 0 0 var(--space-5);
+  padding: var(--space-3) var(--space-4);
+  border: var(--border-width) solid var(--color-border);
+  border-radius: var(--radius);
+  background: var(--color-surface);
+}
+
+.choice-description .form-text {
+  margin-bottom: var(--space-3);
+}
+
+.form-text-label {
+  margin-bottom: var(--space-2);
+  font-size: var(--text-sm);
+  font-weight: 600;
+  color: var(--color-text-muted);
+}
+
+.form-text .verbatim > :last-child {
+  margin-bottom: 0;
+}
+
+.legal-help {
+  margin-top: var(--space-5);
+}
+
+.legal-help h2 {
+  font-size: var(--text-lg);
+}
+
+.slot-label {
+  font-weight: 600;
+}
+
+.slot-placeholder {
+  margin-top: var(--space-3);
+  padding: var(--space-4);
+  border: 2px dashed var(--color-border-strong);
+  border-radius: var(--radius);
+  color: var(--color-text-muted);
+  text-align: center;
+}
+
 /* Review */
+
+.edit-link {
+  font-size: var(--text-sm);
+}
 
 .summary dl {
   margin: 0;

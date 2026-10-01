@@ -197,7 +197,8 @@ Edge. Accessibility target: **WCAG 2.1 AA**.
 │  └─ gen-headers.ts            (post-build: writes dist/_headers with CSP, §11)
 ├─ src/
 │  ├─ main.tsx
-│  ├─ app/                      (App.tsx shell + wizard controller; progress.ts; config.ts source URL)
+│  ├─ app/                      (App.tsx shell + wizard controller; progress.ts pure navigation:
+│  │                             relevance, continue check, chapter progress, edit detour; config.ts)
 │  ├─ core/                     (form-agnostic, reusable across future tools)
 │  │  ├─ pdf/                   (assemble.ts packet assembly; text.ts sanitize + fitting;
 │  │  │                          acroform.ts checkbox/text helpers; pages.ts continuation,
@@ -220,15 +221,21 @@ Edge. Accessibility target: **WCAG 2.1 AA**.
 │  │     ├─ assets.ts           (loadPdfAssets(): lazy, memoized import of loader.ts)
 │  │     ├─ preview.ts          (lazy entry for the UI: buildPacket(state, files, mode))
 │  │     ├─ schema.ts           (state types + initial state)
-│  │     ├─ fieldMap.ts         (schema path → AcroForm field OR coordinates)
+│  │     ├─ field-map.ts         (schema path → AcroForm field OR coordinates)
 │  │     ├─ values.ts           (textValue + per-field sanitize; no pdf-lib; live char check)
 │  │     ├─ fill.ts             (state → form fields: §6.2 follow-ups, fitting)
 │  │     ├─ packet.ts           (buildComplaintPacket: preview/final, disclaimer gate, filename)
 │  │     ├─ disclaimer.ts       (isDisclaimerAccepted / acceptDisclaimer)
 │  │     ├─ verbatim.json       (exact form text shown in UI)
 │  │     ├─ checklist.ts        (derive evidence slots from state)
+│  │     ├─ situation.ts        (complaint-type gates: isReachable / isChecked / normalizeGates, §6.1)
 │  │     ├─ validation.ts       (missingRequired / canSend / softWarnings, §6.3)
-│  │     ├─ steps/              (ids.ts StepId list; index.ts registry; one component per step)
+│  │     ├─ ct-towns.json       (Connecticut's 169 towns: rental City/Town suggestions; source:
+│  │     │                       https://portal.ct.gov/Government/Cities-and-Towns)
+│  │     ├─ steps/              (ids.ts chapter + page ids; pages.ts UI-free registry: relevance,
+│  │     │                       answer rules, fills; index.ts adds titles + components; one file
+│  │     │                       per chapter; shared.tsx: intros, FormText, LegalHelp, ConfirmType,
+│  │     │                       SlotUpload)
 │  │     └─ config.ts           (DOB email, phones, form URL, filename pattern)
 │  ├─ i18n/
 │  │  ├─ en.json                (ALL UI strings; no hard-coded copy in components)
@@ -251,6 +258,23 @@ Edge. Accessibility target: **WCAG 2.1 AA**.
 tool (or the Spanish form in v2) adds a new folder under `src/forms/` and reuses
 core. Do **not** build a generic form-definition framework now; just keep the
 boundary clean.
+
+**Naming:**
+
+- Complaint types are referred to in code only by their `ComplaintType` keys
+  (`formerTenantDepositNotReturned`, …): page ids like
+  `situation.confirm.<ComplaintType>`, helpers like `isReachable(state, type)` /
+  `isChecked(state, type)`. Form positions ("box 1", `Check1`–`Check4`) appear
+  only in `field-map.ts` and as cross-references in this file. A test enforces it.
+- Answer fields are named as states (past participles or adjectives):
+  `movedOut`, `overLimitHeld`, `fwdGiven`.
+- Page ids are `chapter.page` and name what the page holds (`deposit.neededDocs`,
+  `newAddress.forwardingAddressSlot`).
+- File names are kebab-case (`field-map.ts`, `more-questions.tsx`), except a
+  file named after the component it exports (`App.tsx`, `SlotPage.tsx`) or a
+  hook (`useSomething.ts`). A test enforces it. This Mac's filesystem ignores
+  case and Linux CI doesn't, so a rename that only changes letter case takes two
+  `git mv` steps through a temporary name.
 
 **i18n:** v1 is English only, but all UI copy goes through `i18n/en.json` and
 state includes `meta.formVariant: "en"` so a Spanish variant (official DOB
@@ -290,7 +314,7 @@ refactoring.
 Taken from `pnpm form:dump`, `pnpm form:text`, and a rendered visual check of
 `sdcompform-rev-2026.pdf` (SHA-256 `dde91f83…d715`). The full per-field output
 (names, rects, export values) is regenerated into `scripts/out/`. The mapping
-lives in `fieldMap.ts`; `tests/unit/field-map.test.ts` checks that every
+lives in `field-map.ts`; `tests/unit/field-map.test.ts` checks that every
 template field is mapped or listed as intentionally blank.
 
 1. **AcroForm: yes.** It has 63 fields and no XFA. `NeedAppearances` is unset, and the
@@ -313,7 +337,7 @@ template field is mapped or listed as intentionally blank.
      which the app can't verify; the attachment index page lists what is enclosed.
    - **`IfYes2`**, a wide text field on the **correspondence** row. The printed
      question asks only to "enclose a copy" and has no fill-in instruction.
-     **Decision: left blank.** `fieldMap.ts` lists it and the page 3 boxes in
+     **Decision: left blank.** `field-map.ts` lists it and the page 3 boxes in
      `INTENTIONALLY_BLANK`.
    - **Question → field:** interest `Check Box8` (+`IfYes`), correspondence
      `Check Box9`, deposit returned `Check Box10` (+`Yes Amount`), check cashed
@@ -329,7 +353,7 @@ template field is mapped or listed as intentionally blank.
    underscores, so they are drawn by coordinates. The printed line's baseline is y ≈ 171. The signature
    underscores run from x ≈ 93 to 307, and the date underscores from x ≈ 333 to 456. The clear space
    above the line is up to the attestation line at y ≈ 207. Confirmed against Phase 2 sample output
-   (`SIGNATURE_BOX` / `SIGNED_DATE` in `fieldMap.ts`): the signature image is scaled to fit
+   (`SIGNATURE_BOX` / `SIGNED_DATE` in `field-map.ts`): the signature image is scaled to fit
    x 94–306, y 169–204, bottom-left aligned on the line; the date is drawn at x 338, baseline y 173,
    10pt.
 
@@ -355,7 +379,7 @@ to "handle issue #N"; then follow these steps in order.
    statement changes. **Stop for maintainer review**, as in Phase 1.
 3. **Apply, based on the review:**
    - Text only → update `verbatim.json` (and `fieldLabels`).
-   - Fields moved → update `fieldMap.ts`.
+   - Fields moved → update `field-map.ts`.
    - Fields added/removed → update `schema.ts`, the relevant wizard steps,
      `checklist.ts`, and validation. Bump `meta.schemaVersion` and add a
      migration so saved drafts from the old revision still load, with new
@@ -399,6 +423,7 @@ interface DepositComplaintState {
     savedAt: string | null; // ISO timestamp, drives 30-day expiry
   };
   complaintTypes: {
+    // Printed on page 2. Derived from `gates` by normalizeGates(); never set directly.
     formerTenantDepositNotReturned: boolean; // box 1
     currentTenant62PlusExcessOverOneMonth: boolean; // box 2
     currentTenantUnder62ExcessOverTwoMonths: boolean; // box 3
@@ -434,6 +459,20 @@ interface DepositComplaintState {
     courtAction: { answer: YesNo; docketNumber: string };
   };
   additionalComments: string;
+  // App-only answers (§7 question pattern): never printed, never on Review.
+  gates: {
+    movedOut: YesNo;
+    age62OrOlder: YesNo;
+    overLimitHeld: YesNoNotSure;
+    fullAmountReturned: YesNoNotSure;
+    otherDepositPaid: YesNo; // No prints $0.00 in "Amount of any Other Deposit"
+    confirmed: Record<ComplaintType, YesNo>; // "Does this describe your situation?"
+  };
+  forwardingAddress: {
+    fwdGiven: YesNo;
+    fwdInWriting: YesNoNotSure;
+    fwdProofAvailable: YesNoNotSure;
+  };
   signature: {
     pngDataUrl: string | null;
     signedDate: ISODate;
@@ -445,44 +484,128 @@ interface DepositComplaintState {
 Tenant `state` defaults to `""` (many former tenants have moved out of state).
 Rental `state` defaults to `"CT"`.
 
+**Complaint types from the gates (`situation.ts`).** A type's confirmation page
+appears when the type is *reachable*; a type is *checked* (printed) only when
+it is reachable and its confirmation is Yes.
+
+| Type (form box)                               | Reachable when                                                                           |
+| --------------------------------------------- | ---------------------------------------------------------------------------------------- |
+| `formerTenantDepositNotReturned` (1)          | movedOut yes, and not (the form's depositReturned YES and fullAmountReturned yes)        |
+| `currentTenant62PlusExcessOverOneMonth` (2)   | movedOut no, age62OrOlder yes, overLimitHeld not no                                      |
+| `currentTenantUnder62ExcessOverTwoMonths` (3) | movedOut no, age62OrOlder no, overLimitHeld not no                                       |
+| `currentTenantNoEscrowInfo` (4)               | movedOut no (every current tenant sees the confirmation)                                 |
+
+`normalizeGates()` runs after every update: it clears `confirmed[type]` for any
+type that is no longer reachable, then derives `complaintTypes`. The PDF,
+checklist, and validation read only `complaintTypes`.
+
+**Other deposit.** `textValue('rental.otherDepositCents')` is `$0.00` when
+`otherDepositPaid` is No (reusing the user's own answer, §2.2), otherwise the
+typed amount. A typed amount is kept in state on No but not rendered (§6.2).
+
 ### 6.2 Follow-up field rule
 
 If an answer changes from YES to NO, **keep** follow-up values in state (in case
 they switch back) but **do not render** them on the PDF and do not require their
-evidence slots. "Has the check been cashed?" is a follow-up of "Has any part of
-your security deposit been returned?" (§7 step 6): its box is rendered only when
-that answer is YES.
+evidence slots. Each follow-up is its own page, shown only when its answer is
+YES. "Has the check been cashed?" is a follow-up of "Has any part of your
+security deposit been returned?": its box is rendered only when that answer is
+YES.
+
+**One exception:** a complaint type's confirmation is cleared when the type
+becomes unreachable (§6.1), so if it becomes reachable again the user confirms
+it again. All other answers are kept when a gate changes.
 
 ### 6.3 Validation
 
-**Hard-required** (block **Send**, never step navigation): at least one complaint
-type; tenant name; tenant street/city/state/zip; landlord name; rental
-street/city/zip; disclaimer accepted; signature drawn; attestation acknowledged.
-Users can move freely between steps with anything missing. Inline hints appear as
-they type. The Review step lists every missing required item with a link back to
-its step, and the Send button stays disabled until that list is empty.
+**Hard-required** (block **Send**): at least one complaint type; tenant name;
+tenant street/city/state/zip; landlord name; rental street/city/zip; disclaimer
+accepted; signature drawn; attestation acknowledged. Moving between pages needs
+only the page's own answer or "Skip for now" (§7 "Answers to continue"), so a
+hard-required field can be skipped and filled in later. Inline hints appear as
+they type. The Review step lists every missing required item with a link to the
+page that asks for it, and the Send button stays disabled until that list is
+empty.
 
 **Soft warnings** (show, never block):
 
 - Empty non-optional fields → "The form asks for this. If you don't know, you
-  can type 'Unknown'." (Emails are optional on the form: no warning.)
-- Box 1 checked together with any of boxes 2–4 → neutral note: "Box 1 is for
-  former tenants; boxes 2–4 are for current tenants. Please check your selection."
-- Boxes 2 and 3 both checked → neutral note about the age ranges.
+  can type 'Unknown'." (Emails are optional on the form: no warning. Other
+  deposit answered No shows $0.00, so it isn't empty.)
+- An empty Move Out Date, unless the user still lives in the rental
+  (`movedOut` = No, where the Move Out page is skipped).
 - Move-out date before move-in date; dates in the future (except signature date = today).
 - A YES answer with its follow-up empty.
 - A required evidence slot with no files.
 - Packet size over budget (§8.5).
 
 Warnings are phrased as observations, never as advice about which answer is right.
+The complaint-type flow (§7) can't produce contradictory types (former and
+current, or both age ranges), so there are no consistency warnings.
 
 ---
 
 ## 7. Wizard flow
 
-One step per screen. Progress indicator. Back always available. On mobile, the
-"More questions" step shows one question per sub-screen with its follow-up
-appearing directly under YES.
+One question per page, on every screen size. Fields that answer one question
+stay together (a full address, the interest date/amount rows); separate
+questions get separate pages, and follow-ups are their own pages that appear
+only when relevant. Pages are grouped into chapters; each chapter with more than
+one page opens with a short intro page (a sentence or two, then Continue). Back
+is always available.
+
+**Question pattern.** Break compound or legally weighted questions into short,
+mostly yes/no steps that establish whether something applies to the user. When
+it does:
+
+- Claims (complaint types): show the form's exact text with "Does this describe
+  your situation?" Only a Yes to that confirmation checks the box on the PDF.
+  The steps before it are app-only and never print.
+- Requirements and notes (e.g. the forwarding-address note): show the form's
+  exact text, marked "From the official form:", at the step where the user's
+  answers make it relevant.
+
+"Not sure" always shows the relevant form text or the legal help links, never
+the app's own explanation. Help text and examples never indicate whether
+something satisfies a legal requirement (for example, don't list what counts as
+"in writing"). Ordinary fields (names, dates, amounts, and the page 1 YES/NO
+questions) use a single plain-language question with the form's label
+underneath; no confirmation step.
+
+Gate questions must be worded inclusively: anyone who might confirm the verbatim
+statement must reach it. The confirmation step is where the user decides; gates
+only remove people who clearly can't apply.
+
+Questions may be asked in any order; every form field still has exactly one
+source question, questions that gate pages come before the pages they gate, and
+the app never infers a claim from entered numbers (§2.2).
+
+As built: "Not sure" on a gate (over-limit, full amount returned) shows the legal help links and still leads to the confirmation.
+Confirmations are Yes/No only, with the legal help links on the page; No leaves
+the type unchecked. Fact questions (moved out, 62 or older) are Yes/No only.
+Tests check that every printed field is in the `fills` of exactly one page that
+is reachable on some path, and that each page's relevance reads only answers
+from earlier pages.
+
+**Answers to continue.** Continue is never disabled. Tapping it without an
+answer shows an inline error ("Choose an answer to continue" / "Enter an answer
+or skip for now"), linked from the page's inputs with `aria-describedby`, and
+focus moves to it.
+
+- App-added choice questions require a selection. "Not sure" is offered only
+  where a user could genuinely not know (over-limit, full amount returned, in
+  writing, proof). Obvious personal facts (moved out, 62 or
+  older, other deposit paid, gave new address) and confirmations are Yes/No.
+- The form's printed YES/NO questions offer exactly the form's options (NOT
+  SURE only on Cash for Keys) plus a secondary "Skip for now" link. Skipped means
+  blank on the PDF and a soft warning on Review.
+- Information pages (contact details, addresses, dates, amounts, type of rental,
+  terms, follow-up lists) need every non-optional field on the page, or "Skip for
+  now". Skipped items appear in Review's lists; hard-required ones still block
+  Send (§6.3).
+- Optional fields (emails, housing complex, Additional Comments) continue when
+  empty.
+- Skip isn't stored; it only moves on.
 
 **Question wording.** Ask each field as a plain-language question (e.g. "What
 day did you move in?" for "Move In Date"). Rules:
@@ -504,23 +627,29 @@ day did you move in?" for "Move In Date"). Rules:
   types, footnotes, page 2 statements, attestation, checklist labels, and the
   forwarding-address note are always shown verbatim.
 
-| #   | Step                | Contents                                                                                                                                                                                                                                                                                                                                                                                      |
-| --- | ------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| 0   | Welcome             | What the tool does, time estimate. **Short non-blocking notice:** "Not legal advice. Not a government website. We count anonymous usage to improve the tool; we never collect what you type or upload." with link to Privacy. Device choice as the two start buttons (§9.1). Link to DOB's page for the official Spanish form (fires `spanish_form_link_clicked`). Links to legal help (§12). |
-| 1   | Your situation      | The four complaint types, verbatim, as checkboxes + footnotes verbatim. Soft consistency notes.                                                                                                                                                                                                                                                                                               |
-| 2   | What you'll need    | Evidence checklist derived from selected types (§8.4). If box 1 is checked, show the forwarding-address note verbatim. Never blocks.                                                                                                                                                                                                                                                          |
-| 3   | About you           | Name, current address, daytime phone, email (optional).                                                                                                                                                                                                                                                                                                                                       |
-| 4   | Your landlord       | Name, address, daytime phone, email (optional).                                                                                                                                                                                                                                                                                                                                               |
-| 5   | The rental          | Unit street, housing complex (optional), city/state/zip, type of rental, terms, move-in, move-out.                                                                                                                                                                                                                                                                                            |
-| 6   | Money               | Monthly rent, date last paid rent, security deposit, other deposit, deposit returned (+amount, +check cashed), interest paid (+repeatable date/amount rows).                                                                                                                                                                                                                                  |
-| 7   | More questions      | Cash for Keys, roommates (+names), landlord's other properties (+addresses), correspondence received, court action (+docket number).                                                                                                                                                                                                                                                          |
-| 8   | Documents           | One upload slot per derived checklist item (§8.4), plus the optional "Other documents" slot last. Thumbnails, per-slot page count, reorder/remove, per-slot grayscale toggle, live size meter.                                                                                                                                                                                                |
-| 9   | Additional comments | Free textarea. Neutral prompt only (§2.2). Character count. Note that long text continues on an extra page.                                                                                                                                                                                                                                                                                   |
-| 10  | Disclaimer          | Clickwrap from §10. Two unchecked checkboxes; button disabled until both checked. Store `disclaimerVersion` + timestamp in state. **No PDF is built until this is accepted.** If a resumed draft has an older `disclaimerVersion`, show it again.                                                                                                                                             |
-| 11  | Review              | HTML summary grouped by step with "Edit" links; missing-required list (§6.3); warnings list; "Preview PDF" (opens blob URL in new tab). Builds an **unsigned preview** PDF on entering, with a light "PREVIEW, NOT SIGNED" header on each form page.                                                                                                                                          |
-| 12  | Read and sign       | Page 2 statements verbatim, "I have read the statements above" checkbox, the form's attestation sentence verbatim directly above the signature pad, date (set to today on every visit, editable while there; never persisted, §9.2). Kept separate from the disclaimer: this screen is the State's text only.                                                                                                                              |
-| 13  | Send                | Builds the **final signed** PDF on entering (no preview header) and keeps it in memory; tiered send (§8.6). DOB address shown large with Copy button. Plain "Download PDF" always visible. Send disabled while §6.3 hard requirements are missing.                                                                                                                                            |
-| 14  | Confirmation        | "Check your Sent folder." DOB phone numbers for follow-up. "I've sent it" → offers erase dialog. Shared-computer erase section (§9.3). "Something not working? Let us know" link (§19.5).                                                                                                                                                                                                     |
+Chapters and pages (`steps/ids.ts` is the full list; ids are the telemetry
+step enum, §19.3). Pages in *italics* appear only when the condition holds.
+
+| Chapter             | Pages                                                                                                                                                                                                                                                                                                                                                                     |
+| ------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Welcome             | What the tool does, time estimate. **Short non-blocking notice:** "Not legal advice. Not a government website. We count anonymous usage to improve the tool; we never collect what you type or upload." with link to Privacy. Device choice as the two start buttons (§9.1). Link to DOB's page for the official Spanish form (fires `spanish_form_link_clicked`). Links to legal help (§12). |
+| Your situation      | Intro; moved out? *Current tenants:* 62 or older?; over-limit (one month's rent for 62+, two months' under 62); confirm type 2 or 3; confirm type 4 (no gate: every current tenant decides there); *no type checked:* "The form asks you to check at least one of these." with the four types verbatim and legal help.                                                                        |
+| Your deposit        | Intro; monthly rent; security deposit; other deposit paid? (*Yes:* amount); the form's "any part returned?" (*YES:* amount, check cashed, *former tenants:* was it the full amount?); *former tenants:* confirm type 1, *no type checked* note; interest paid? (*YES:* date/amount rows); What you'll need (derived checklist, §8.4; never blocks).                              |
+| Your new address    | *Type 1 checked:* intro; gave landlord your new address?; *Yes:* in writing?; *Yes:* copy or proof you sent it?; *Yes:* the forwarding-address upload slot. No or Not sure at any step shows the whole forwarding-address note verbatim, marked "From the official form:", and ends the chapter.                                                                            |
+| About you           | Intro; name; current address (street, city, state, zip); daytime phone; email (optional).                                                                                                                                                                                                                                                                                 |
+| Your landlord       | Intro; name; address; daytime phone; email (optional).                                                                                                                                                                                                                                                                                                                    |
+| The rental          | Intro; unit address (City/Town suggests the 169 towns; current tenants get "Use the address you gave earlier"); housing complex (optional); type of rental; terms; then the timeline: move in, *not current tenants:* move out, date you last paid rent.                                                                                                                  |
+| More questions      | Intro; Cash for Keys; roommates (*YES:* names); landlord's other properties (*YES:* addresses); correspondence received; court action (*YES:* docket number).                                                                                                                                                                                                               |
+| Documents           | Intro listing the derived slots; one page per derived slot (§8.4), "Other documents" last. Thumbnails, per-slot page count, reorder/remove, per-slot grayscale toggle, live size meter.                                                                                                                                                                                   |
+| Additional comments | Free textarea. Neutral prompt only (§2.2). Character count. Note that long text continues on an extra page.                                                                                                                                                                                                                                                              |
+| Disclaimer          | Clickwrap from §10. Two unchecked checkboxes; button disabled until both checked. Store `disclaimerVersion` + timestamp in state. **No PDF is built until this is accepted.** If a resumed draft has an older `disclaimerVersion`, show it again.                                                                                                                        |
+| Review              | HTML summary grouped by chapter with an "Edit" link on every row; missing-required list (§6.3); warnings list; "Preview PDF" (opens blob URL in new tab). Builds an **unsigned preview** PDF on entering, with a light "PREVIEW, NOT SIGNED" header on each form page. App-only answers aren't shown.                                                                     |
+| Read and sign       | Two pages: the page 2 statements verbatim with "I have read the statements above"; then the form's attestation sentence verbatim directly above the signature pad, and the date (set to today on every visit, editable while there; never persisted, §9.2). Kept separate from the disclaimer: these pages are the State's text only.                                   |
+| Send                | Builds the **final signed** PDF on entering (no preview header) and keeps it in memory; tiered send (§8.6). DOB address shown large with Copy button. Plain "Download PDF" always visible. Send disabled while §6.3 hard requirements are missing.                                                                                                                       |
+| Confirmation        | "Check your Sent folder." DOB phone numbers for follow-up. "I've sent it" → offers erase dialog. Shared-computer erase section (§9.3). "Something not working? Let us know" link (§19.5).                                                                                                                                                                                |
+
+A chapter with nothing to ask for the user's answers is skipped whole, intro
+included.
 
 Header on every step: "Start over and erase" link (opens erase dialog) and, in
 device mode, the "Saved on this device · Erase" indicator.
@@ -530,8 +659,30 @@ Welcome and Send steps: "The State recently updated this form. We're updating
 this tool; for now your complaint will use the previous version of the form."
 Hidden when `false`.
 
-**Progress** ("Step n of N") is computed from the step registry: each entry has
-`inProgress`, false for Welcome and Confirmation, so they are not counted.
+**Progress** is shown by chapter: "Your landlord · 2 of 4", counting the
+chapter's pages that apply to the user's answers so far (the total grows when an
+answer reveals a follow-up). Intro pages, conditional notes, and one-page
+chapters show just the chapter title. The progress bar shows the chapter's
+position. Welcome and Confirmation show no progress.
+
+**Edit from Review.** Every Edit link opens the page that asks that question,
+whose primary button reads "Save and return to review" (Back and a secondary
+Next stay available). It goes straight back to Review, unless the change made
+new pages relevant and unanswered (e.g. a confirmation or follow-up). Then it
+shows an interstitial page (`review.moreInfoNeeded`, not part of the normal
+flow): "Your change means we need a bit more information before your review." plus
+Continue, and walks those pages in order. The button reads "Continue" until the
+last one, which reads "Save and return to review". Pages that were already
+unanswered or skipped before the edit never start a detour.
+
+**Address inputs.** The tenant's fields carry full `autocomplete` tokens (`name`,
+`street-address`, `address-level2`, `address-level1`, `postal-code`, `tel`,
+`email`). The landlord's fields use `autocomplete="off"` and neutral ids and
+names (`ll-1`…), so browsers don't offer the tenant's saved address there. The
+rental's City/Town suggests Connecticut's 169 towns via a `<datalist>` bundled
+as data (`ct-towns.json`, matching the State's list at
+https://portal.ct.gov/Government/Cities-and-Towns; free text still allowed). No
+address lookup services.
 
 **Fixed-format inputs stay within the form's boxes:** State is two letters
 (`maxlength=2`, uppercased, non-letters dropped); Zip is five digits
@@ -572,10 +723,10 @@ All added pages are US Letter (612 × 792 pt), 0.5in margins, Helvetica, black.
 
 - Fonts: pdf-lib's standard fonts, Helvetica and Helvetica-Bold, with WinAnsi
   encoding (Western European Latin). Nothing is bundled or embedded.
-- If AcroForm: fill by field name from `fieldMap.ts`, set text in Helvetica at
+- If AcroForm: fill by field name from `field-map.ts`, set text in Helvetica at
   the fitted size (§8.3), `form.updateFieldAppearances(font)`, then `form.flatten()`.
 - If not (or for fields missing from the AcroForm): draw text at
-  `{ page, x, y, maxWidth, maxHeight? }` from `fieldMap.ts`.
+  `{ page, x, y, maxWidth, maxHeight? }` from `field-map.ts`.
 - Checkboxes on a flat PDF: draw an "X" centered in the box rect.
 - Formatting at render: dates `MM/DD/YY`; money `$1,250.00`; phone
   `(860) 555-0123` when 10 digits, otherwise as typed.
@@ -635,6 +786,9 @@ Derived deterministically from state. Labels come verbatim from the form's page
 
 Every slot is optional to fill (never blocks Send); empty checklist slots appear as
 soft warnings on Review. Dedupe slots. A slot may hold multiple files; each file may produce multiple pages.
+A slot is one piece of state keyed by its id, even when it appears on more than
+one page (the forwarding-address slot is offered in Your new address and on the
+Documents step), so the index counts it once.
 For the Proof of Age slot, show a neutral note: "The form says the Department may
 share your documents with your landlord. You may cover information you don't
 want shared."
@@ -1085,6 +1239,13 @@ Keep them in sync.
 - Phone formatting.
 - `checklist.ts` slot derivation for every complaint type combination and the
   cash-for-keys / correspondence triggers.
+- Question flow (§7): each gate path to each complaint type (Not sure on a gate
+  still reaches the confirmation; No on a confirmation leaves it unchecked; a
+  type made unreachable and reachable again needs a fresh confirmation); every
+  printed field has exactly one source page, reachable on some path; each page's
+  relevance reads only earlier answers; Continue rules; chapter progress; the
+  Review edit detour; other deposit No → `$0.00`; landlord address attributes;
+  169 towns; no "box N" names outside `field-map.ts`.
 - Follow-up rule (§6.2): hidden follow-ups not rendered.
 - Text fitting: shrink behaviour and overflow → continuation page.
 - Fill round-trip: build a packet from fixture state, reload with pdf-lib, assert
@@ -1200,15 +1361,16 @@ Work phase by phase. Stop at the end of each phase and report to the maintainer.
 1. **Scaffold + form inventory.** pnpm (with §3.1 settings)/Vite/Preact/TS/Biome/Vitest set up. Commit the
    template + hash. Run `scripts/dump-form-fields.ts` (field names, types, pages,
    rects, export values) and `scripts/extract-form-text.ts`. Report findings on
-   §5.2 and any `verbatim.json` corrections. **Do not write fieldMap.ts until
+   §5.2 and any `verbatim.json` corrections. **Do not write field-map.ts until
    the maintainer reviews the dump.**
-2. **PDF packet from fixtures.** `fieldMap.ts`, fill + flatten, text fitting,
+2. **PDF packet from fixtures.** `field-map.ts`, fill + flatten, text fitting,
    continuation page, index page, exhibit pages, size budget. No UI. Unit tests.
    Output sample PDFs for visual review.
 3. **Wizard + state.** Steps 0–12 except uploads/signature, validation (Send-time
    gating), disclaimer placement, i18n strings, tokens/CSS.
-   - **Phase 3b: question flow redesign.** One question per page, chapters, and
-     the question pattern. Details will come in the Phase 3b plan.
+   - **Phase 3b: question flow redesign.** One question per page, chapters in
+     story order, the question pattern (§7), answers to continue, Review edit
+     detour, address inputs. Defined in §6 and §7.
 4. **Uploads + signature.** Image pipeline incl. grayscale toggle, PDF import,
    slots incl. "Other documents", size meter, signature pad.
 5. **Send + storage + erase.** Tiered send, `.eml`, draftStore both backends,
@@ -1242,8 +1404,10 @@ Work phase by phase. Stop at the end of each phase and report to the maintainer.
 - Attorney / legal aid review of the disclaimer, Terms, and Privacy text; the
   two neutral definitions shown in the wizard ("Cash for Keys: an offer from a
   landlord to pay a tenant to move out"; "Periodic rent: your regular rent
-  payment (for most people, monthly rent)"); and the complaint-type question
-  flow (coming in Phase 3b).
+  payment (for most people, monthly rent)"); and the paraphrased questions in the
+  complaint-type and forwarding-address flows (§7; wording table in the Phase 3b
+  PR): moved out, 62 or older, over-limit, "Was it the full amount?", the three
+  forwarding-address questions, and the other-deposit question.
 - Finalize app name (consider wording that doesn't imply guaranteed recovery).
   Do this before the attorney review, since the name appears in the disclaimer.
   Renaming = change `app.name` in `i18n/en.json`.

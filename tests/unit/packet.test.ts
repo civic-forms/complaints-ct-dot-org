@@ -2,7 +2,7 @@ import { PDFDocument } from 'pdf-lib';
 import { describe, expect, it } from 'vitest';
 import { PdfLockedError, PdfUnreadableError } from '../../src/core/pdf/errors.ts';
 import type { AttachmentFile } from '../../src/core/pdf/pages.ts';
-import { TEXT_FIELDS } from '../../src/forms/ct-dob-security-deposit/fieldMap.ts';
+import { TEXT_FIELDS } from '../../src/forms/ct-dob-security-deposit/field-map.ts';
 
 import {
   buildComplaintPacket,
@@ -56,7 +56,7 @@ describe('packet assembly', () => {
       other: [jpeg],
       depositProof: [jpeg, jpeg],
       correspondence: [{ kind: 'pdf', bytes: await sampleAttachmentPdf() }],
-      proofOfAge: [jpeg], // box 2 isn't checked: not derived, so left out
+      proofOfAge: [jpeg], // its complaint type isn't checked: not derived, so left out
     };
     const packet = await buildComplaintPacket(type1NoAnswers, files, { mode: 'preview', assets });
     expect(

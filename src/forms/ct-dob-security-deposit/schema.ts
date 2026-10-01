@@ -15,15 +15,15 @@ export interface Address {
 }
 
 export interface ComplaintTypes {
-  formerTenantDepositNotReturned: boolean; // box 1
-  currentTenant62PlusExcessOverOneMonth: boolean; // box 2
-  currentTenantUnder62ExcessOverTwoMonths: boolean; // box 3
-  currentTenantNoEscrowInfo: boolean; // box 4
+  formerTenantDepositNotReturned: boolean;
+  currentTenant62PlusExcessOverOneMonth: boolean;
+  currentTenantUnder62ExcessOverTwoMonths: boolean;
+  currentTenantNoEscrowInfo: boolean;
 }
 
 export type ComplaintType = keyof ComplaintTypes;
 
-/** Box order on the form (page 2) and in the checklist (page 3). */
+/** The form's order (page 2) and the checklist's (page 3). */
 export const COMPLAINT_TYPES: readonly ComplaintType[] = [
   'formerTenantDepositNotReturned',
   'currentTenant62PlusExcessOverOneMonth',
@@ -44,7 +44,31 @@ export interface DepositComplaintState {
     storageMode: 'session' | 'device' | null;
     savedAt: string | null; // ISO timestamp, drives 30-day expiry
   };
+  /**
+   * Printed on the form. Derived from `gates` by normalizeGates() (situation.ts)
+   * on every update; never set directly by the wizard.
+   */
   complaintTypes: ComplaintTypes;
+  /**
+   * App-only answers (§6.1, §7 question pattern). Never printed, never shown on
+   * Review. They decide which pages appear and which types can be confirmed.
+   */
+  gates: {
+    movedOut: YesNo;
+    age62OrOlder: YesNo;
+    overLimitHeld: YesNoNotSure;
+    fullAmountReturned: YesNoNotSure;
+    /** No prints $0.00 in Amount of any Other Deposit (the user's own answer, §2.2). */
+    otherDepositPaid: YesNo;
+    /** "Does this describe your situation?" Cleared when the type becomes unreachable. */
+    confirmed: Record<ComplaintType, YesNo>;
+  };
+  /** App-only: the forwarding-address questions for former tenants. */
+  forwardingAddress: {
+    fwdGiven: YesNo;
+    fwdInWriting: YesNoNotSure;
+    fwdProofAvailable: YesNoNotSure;
+  };
   tenant: Person;
   landlord: Person;
   rental: {
@@ -110,6 +134,20 @@ export function initialState(): DepositComplaintState {
       currentTenantUnder62ExcessOverTwoMonths: false,
       currentTenantNoEscrowInfo: false,
     },
+    gates: {
+      movedOut: null,
+      age62OrOlder: null,
+      overLimitHeld: null,
+      fullAmountReturned: null,
+      otherDepositPaid: null,
+      confirmed: {
+        formerTenantDepositNotReturned: null,
+        currentTenant62PlusExcessOverOneMonth: null,
+        currentTenantUnder62ExcessOverTwoMonths: null,
+        currentTenantNoEscrowInfo: null,
+      },
+    },
+    forwardingAddress: { fwdGiven: null, fwdInWriting: null, fwdProofAvailable: null },
     // Tenant state stays blank: many former tenants have moved out of state.
     tenant: emptyPerson(),
     landlord: emptyPerson(),

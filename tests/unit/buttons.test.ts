@@ -12,7 +12,7 @@ import {
   TYPE_OF_RENTAL,
   YES_NO_FIELDS,
   type YesNoQuestion,
-} from '../../src/forms/ct-dob-security-deposit/fieldMap.ts';
+} from '../../src/forms/ct-dob-security-deposit/field-map.ts';
 import { buildComplaintPacket } from '../../src/forms/ct-dob-security-deposit/packet.ts';
 import {
   COMPLAINT_TYPES,

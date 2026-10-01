@@ -8,7 +8,7 @@ import {
   TEXT_FIELDS,
   TYPE_OF_RENTAL,
   YES_NO_FIELDS,
-} from '../../src/forms/ct-dob-security-deposit/fieldMap.ts';
+} from '../../src/forms/ct-dob-security-deposit/field-map.ts';
 import { loadAssets } from '../helpers/assets.ts';
 
 let doc: PDFDocument;
@@ -23,7 +23,7 @@ const onValues = (name: string) =>
     .acroField.getWidgets()
     .map((w) => w.getOnValue()?.decodeText());
 
-describe('fieldMap against the template', () => {
+describe('field-map.ts against the template', () => {
   it('maps every text field to an existing text field', () => {
     for (const { field } of TEXT_FIELDS) {
       expect(doc.getForm().getField(field), field).toBeInstanceOf(PDFTextField);

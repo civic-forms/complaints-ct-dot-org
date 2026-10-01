@@ -5,9 +5,11 @@
   },
   "nav": {
     "back": "Back",
+    "continue": "Continue",
     "next": "Next",
-    "progress": "Step {n} of {total}",
-    "subProgress": "Question {n} of {total}",
+    "skip": "Skip for now",
+    "saveAndReturn": "Save and return to review",
+    "chapterProgress": "{chapter} · {n} of {total}",
     "edit": "Edit",
     "stepsLabel": "Progress"
   },
@@ -27,7 +29,13 @@
     "unprintable": "The form can't print {chars}. Please use a plain letter instead.",
     "moneyInvalid": "Enter an amount in dollars, like 1250 or 1,250.00.",
     "charQuote": "'{char}'",
-    "listJoin": ", "
+    "listJoin": ", ",
+    "answers": {
+      "yes": "Yes",
+      "no": "No",
+      "notSure": "Not sure"
+    },
+    "formText": "From the official form:"
   },
   "steps": {
     "welcome": {
@@ -42,50 +50,18 @@
       "startDeviceHint": "Only if you're the only one who uses it",
       "spanishHeading": "Formulario en español",
       "spanishText": "The Department of Banking publishes an official Spanish version of this form.",
-      "spanishLink": "Ver el formulario en español en el sitio del Departamento de Bancos",
-      "legalHelpHeading": "Legal help",
-      "legalHelpText": "For questions about your rights, you can contact:"
-    },
-    "situation": {
-      "title": "Your situation",
-      "intro": "Check each box that applies to you. These are the form's own words.",
-      "periodicRentTerm": "Periodic rent",
-      "periodicRentDefinition": "your regular rent payment (for most people, monthly rent)"
+      "spanishLink": "Ver el formulario en español en el sitio del Departamento de Bancos"
     },
     "needs": {
       "title": "What you'll need",
-      "intro": "Based on the boxes you checked, the form's checklist (page 3) asks for these documents. You can add them later, on the Documents step. Nothing here stops you from continuing.",
-      "noTypes": "Check at least one box on the previous step to see the documents that go with it."
-    },
-    "aboutYou": {
-      "title": "About you"
-    },
-    "landlord": {
-      "title": "Your landlord"
-    },
-    "rental": {
-      "title": "The rental"
-    },
-    "money": {
-      "title": "Money"
-    },
-    "moreQuestions": {
-      "title": "More questions"
-    },
-    "documents": {
-      "title": "Documents",
-      "placeholder": "Adding files is coming in the next update. These are the places your documents will go:"
+      "intro": "Based on your answers, the form's checklist (page 3) asks for these documents. You can add them later, on the Documents step. Nothing here stops you from continuing.",
+      "noTypes": "No complaint type is checked yet, so only the documents asked for with every complaint are listed."
     },
     "comments": {
-      "title": "Additional comments",
       "count": "{count} characters",
       "overflowNote": "If your comments don't fit in the box on the form, the full text continues on an extra page."
     },
-    "disclaimer": {
-      "title": "Before we put your packet together"
-    },
     "review": {
-      "title": "Review",
       "intro": "Check your answers. This is what goes on your form.",
       "missingHeading": "Needed before you can send",
       "missingNone": "Everything required is filled in.",
@@ -104,35 +80,38 @@
       "none": "None checked"
     },
     "sign": {
-      "title": "Read and sign",
       "readCheckbox": "I have read the statements above",
       "signaturePlaceholder": "The signature pad is coming in the next update.",
       "dateLabel": "Date",
       "dateHelp": "This is set to today's date each time you open this step."
+    },
+    "periodicRent": {
+      "periodicRentTerm": "Periodic rent",
+      "periodicRentDefinition": "your regular rent payment (for most people, monthly rent)"
     }
   },
   "fields": {
     "tenant": {
       "name": "What is your full name?",
-      "street": "What is your current street address?",
+      "street": "Street address",
       "city": "City or town",
       "state": "State",
       "zip": "Zip code",
       "daytimePhone": "What phone number can the Department reach you at during the day?",
-      "email": "Your email address"
+      "email": "What is your email address?"
     },
     "landlord": {
       "name": "What is your landlord's name?",
-      "street": "Your landlord's street address",
-      "city": "City or town",
-      "state": "State",
-      "zip": "Zip code",
+      "street": "Landlord's street address",
+      "city": "Landlord's city or town",
+      "state": "Landlord's state",
+      "zip": "Landlord's zip code",
       "daytimePhone": "What phone number can your landlord be reached at during the day?",
-      "email": "Your landlord's email address"
+      "email": "What is your landlord's email address?"
     },
     "rental": {
-      "unitStreet": "What is the street address of the rental unit?",
-      "housingComplexName": "Name of the housing complex, if there is one",
+      "unitStreet": "Street address",
+      "housingComplexName": "What is the name of the housing complex, if there is one?",
       "city": "City or town",
       "state": "State",
       "zip": "Zip code",
@@ -161,11 +140,11 @@
       "landlordOtherProperties": "Does the landlord own other properties?",
       "propertyAddress": "Address {n}",
       "correspondenceReceived": "Have you received any correspondence regarding your security deposit?",
-      "correspondenceNote": "You can add a copy on the Documents step.",
       "courtAction": "Has there been any court action involving this rental?",
       "docketNumber": "Docket number",
       "docketHelp": "The docket number is printed at the top of court papers.",
-      "additionalComments": "Anything else you want the Department to know, in your own words."
+      "additionalComments": "Anything else you want the Department to know, in your own words.",
+      "correspondenceNote": "You can add a copy on the Documents step."
     }
   },
   "validation": {
@@ -179,8 +158,6 @@
       "empty": "The form asks for this. If you don't know, you can type \"Unknown\".",
       "emptyFixed": "The form asks for this.",
       "notAnswered": "The form asks for this question to be answered.",
-      "box1WithCurrent": "Box 1 is for former tenants; boxes 2–4 are for current tenants. Please check your selection.",
-      "box2And3": "Box 2 is for tenants 62 or older; box 3 is for tenants under 62. Please check your selection.",
       "moveOutBeforeMoveIn": "The move-out date is before the move-in date.",
       "futureDate": "This date is in the future.",
       "followUpEmpty": "You answered YES, and this part is still empty.",
@@ -250,5 +227,85 @@
     "otherHelp": "Anything else you want the Department to see.",
     "correspondenceHint": "include the envelope",
     "proofOfAgeNote": "The form says the Department may share your documents with your landlord. You may cover information you don't want shared."
+  },
+  "errors": {
+    "chooseAnswer": "Choose an answer to continue",
+    "enterOrSkip": "Enter an answer or skip for now"
+  },
+  "legalHelp": {
+    "heading": "Legal help",
+    "text": "For questions about your rights, you can contact:"
+  },
+  "chapters": {
+    "situation": {
+      "title": "Your situation",
+      "intro": "First, a few questions about where things stand with your rental."
+    },
+    "deposit": {
+      "title": "Your deposit",
+      "intro": "Next, some questions about your rent and your deposit."
+    },
+    "newAddress": {
+      "title": "Your new address",
+      "intro": "Next, a few questions about letting your landlord know your new address."
+    },
+    "aboutYou": {
+      "title": "About you",
+      "intro": "Now, a few questions about you."
+    },
+    "landlord": {
+      "title": "Your landlord",
+      "intro": "Next, a few questions about your landlord."
+    },
+    "rental": {
+      "title": "The rental",
+      "intro": "Next, some questions about the rental."
+    },
+    "moreQuestions": {
+      "title": "More questions",
+      "intro": "A few more questions from the form."
+    },
+    "documents": {
+      "title": "Documents",
+      "intro": "Based on your answers, the form's checklist (page 3) asks for these documents. Adding files is coming in the next update."
+    },
+    "comments": {
+      "title": "Additional comments"
+    },
+    "disclaimer": {
+      "title": "Before we put your packet together"
+    },
+    "review": {
+      "title": "Review"
+    },
+    "sign": {
+      "title": "Read and sign"
+    }
+  },
+  "pages": {
+    "movedOut": "Have you moved out of the rental?",
+    "age62OrOlder": "Are you 62 or older?",
+    "overLimitHeld62": "Is your landlord holding more than one month's rent as your security deposit?",
+    "overLimitHeldUnder62": "Is your landlord holding more than two months' rent as your security deposit?",
+    "confirmQuestion": "Does this describe your situation?",
+    "noTypeTitle": "The form asks you to check at least one of these.",
+    "fullAmountReturned": "Was it the full amount?",
+    "otherDepositPaid": "Did you pay any other deposit (besides the security deposit)?",
+    "fwdGiven": "Did you give your landlord your new address?",
+    "fwdInWriting": "Was it in writing?",
+    "fwdProofAvailable": "Do you have a copy, or proof that you sent it?",
+    "slotTitle": "Add this document",
+    "slotPlaceholder": "Adding files is coming in the next update.",
+    "slotShared": "This is the same place as on the Documents step, so a file added in one place shows in both.",
+    "tenantAddress": "What is your current address?",
+    "landlordAddress": "What is your landlord's address?",
+    "rentalAddress": "What is the address of the rental unit?",
+    "useEarlierAddress": "Use the address you gave earlier",
+    "interestPayments": "When was interest paid, and how much?",
+    "roommateNames": "What are your roommates' or co-renters' names?",
+    "propertyAddresses": "What are the addresses of the landlord's other properties?",
+    "docketNumber": "What is the docket number?",
+    "moreInfoNeededTitle": "A few more questions",
+    "moreInfoNeeded": "Your change means we need a bit more information before your review."
   }
 }

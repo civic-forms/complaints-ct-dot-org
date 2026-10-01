@@ -1,37 +1,32 @@
-// What every wizard step receives, and the registry entry shape.
+// What every wizard page receives, and the registry entry shape.
 
 import type { FunctionComponent } from 'preact';
 import type { DepositComplaintState } from '../schema.ts';
 import type { Issue } from '../validation.ts';
 import type { UnsupportedChars } from '../values.ts';
 import type { StepId } from './ids.ts';
+import type { PageSpec } from './pages.ts';
 
 export type Update = (recipe: (s: DepositComplaintState) => DepositComplaintState) => void;
 
 export interface StepProps {
   state: DepositComplaintState;
   update: Update;
-  goTo: (id: StepId) => void;
+  /** `fromReview` starts an edit: the page shows "Save and return to review". */
+  goTo: (id: StepId, opts?: { fromReview?: boolean }) => void;
   next: () => void;
   /** Characters the form can't print, per field (live). */
   unsupported: readonly UnsupportedChars[];
   /** Soft warnings for the current state (§6.3). */
   warnings: readonly Issue[];
-  /** Current sub-screen, for steps that have them. */
-  sub: number;
-  /** Narrow viewport (one question per sub-screen). */
-  narrow: boolean;
+  /** The "answer to continue" error's element id while it's shown, for aria-describedby. */
+  pageError: string | null;
 }
 
-export interface StepDef {
-  id: StepId;
-  /** The step's h1. */
-  title: string;
-  /** Counted in "Step n of N" (not Welcome or Confirmation). */
-  inProgress: boolean;
+export interface PageDef extends PageSpec {
+  /** The page's h1, rendered by the shell. Absent when the question itself is the h1. */
+  title?: string;
   Component: FunctionComponent<StepProps>;
-  /** Number of sub-screens; defaults to 1. */
-  subScreens?: (narrow: boolean) => number;
-  /** The step has its own primary action instead of Next (Back stays). */
+  /** The page has its own primary action instead of Continue (Back stays). */
   hideNext?: boolean;
 }

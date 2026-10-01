@@ -1,4 +1,4 @@
-// Step 10: the clickwrap (CLAUDE.md §10). Two unchecked boxes; no PDF is built
+// The clickwrap (CLAUDE.md §10). Two unchecked boxes; no PDF is built
 // until the current version is accepted.
 
 import { useState } from 'preact/hooks';

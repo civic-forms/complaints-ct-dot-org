@@ -1,16 +1,14 @@
-// Wizard step IDs (CLAUDE.md §7), in order. Kept apart from the step components
-// so validation and (later) telemetry can use them without loading any UI.
+// Chapter and page ids (CLAUDE.md §7), in flow order. Kept apart from the page
+// components so validation and (later) telemetry can use them without loading
+// any UI. Page ids are `chapter.page` and name what the page holds (§4).
 
-import type { TextPath } from '../fieldMap.ts';
-
-export const STEP_IDS = [
-  'welcome',
+export const CHAPTER_IDS = [
   'situation',
-  'needs',
+  'deposit',
+  'newAddress',
   'aboutYou',
   'landlord',
   'rental',
-  'money',
   'moreQuestions',
   'documents',
   'comments',
@@ -19,27 +17,92 @@ export const STEP_IDS = [
   'sign',
 ] as const;
 
-export type StepId = (typeof STEP_IDS)[number];
+export type ChapterId = (typeof CHAPTER_IDS)[number];
 
-/** The step where each text field is entered (for Edit links). */
-export function stepOfPath(path: TextPath): StepId {
-  if (path.startsWith('tenant.')) return 'aboutYou';
-  if (path.startsWith('landlord.')) return 'landlord';
-  switch (path) {
-    case 'rental.monthlyRentCents':
-    case 'rental.lastRentPaidDate':
-    case 'rental.securityDepositCents':
-    case 'rental.otherDepositCents':
-    case 'questions.depositReturned.amountCents':
-    case 'questions.interestPaid.payments':
-      return 'money';
-    case 'questions.courtAction.docketNumber':
-    case 'questions.roommates.names':
-    case 'questions.landlordOtherProperties.addresses':
-      return 'moreQuestions';
-    case 'additionalComments':
-      return 'comments';
-    default:
-      return 'rental';
-  }
-}
+export const STEP_IDS = [
+  'welcome',
+
+  'situation.intro',
+  'situation.movedOut',
+  'situation.age62OrOlder',
+  'situation.overLimitHeld',
+  'situation.confirm.currentTenant62PlusExcessOverOneMonth',
+  'situation.confirm.currentTenantUnder62ExcessOverTwoMonths',
+  'situation.confirm.currentTenantNoEscrowInfo',
+  'situation.noTypeNote',
+
+  'deposit.intro',
+  'deposit.monthlyRent',
+  'deposit.securityDeposit',
+  'deposit.otherDepositPaid',
+  'deposit.otherDeposit',
+  'deposit.depositReturned',
+  'deposit.returnedAmount',
+  'deposit.checkCashed',
+  'deposit.fullAmountReturned',
+  'deposit.confirm.formerTenantDepositNotReturned',
+  'deposit.noTypeNote',
+  'deposit.interestPaid',
+  'deposit.interestPayments',
+  'deposit.neededDocs',
+
+  'newAddress.intro',
+  'newAddress.fwdGiven',
+  'newAddress.fwdInWriting',
+  'newAddress.fwdProofAvailable',
+  'newAddress.forwardingAddressSlot',
+
+  'aboutYou.intro',
+  'aboutYou.name',
+  'aboutYou.address',
+  'aboutYou.phone',
+  'aboutYou.email',
+
+  'landlord.intro',
+  'landlord.name',
+  'landlord.address',
+  'landlord.phone',
+  'landlord.email',
+
+  'rental.intro',
+  'rental.address',
+  'rental.housingComplex',
+  'rental.typeOfRental',
+  'rental.terms',
+  'rental.moveIn',
+  'rental.moveOut',
+  'rental.lastRentPaid',
+
+  'moreQuestions.intro',
+  'moreQuestions.cashForKeys',
+  'moreQuestions.roommates',
+  'moreQuestions.roommateNames',
+  'moreQuestions.otherProperties',
+  'moreQuestions.propertyAddresses',
+  'moreQuestions.correspondence',
+  'moreQuestions.courtAction',
+  'moreQuestions.docketNumber',
+
+  'documents.intro',
+  'documents.depositProof',
+  'documents.rentalAgreement',
+  'documents.correspondence',
+  'documents.forwardingAddress',
+  'documents.proofOfAge',
+  'documents.overageLetter62',
+  'documents.overageLetter',
+  'documents.escrowLetter',
+  'documents.certifiedMailReceipt',
+  'documents.certifiedMailReturnReceipt',
+  'documents.cashForKeysAgreement',
+  'documents.other',
+
+  'comments',
+  'disclaimer',
+  'review',
+  'review.moreInfoNeeded',
+  'sign.statements',
+  'sign.signature',
+] as const;
+
+export type StepId = (typeof STEP_IDS)[number];
