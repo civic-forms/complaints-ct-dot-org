@@ -4,6 +4,7 @@ import {
   CAP_BYTES,
   largestAttachments,
   pageBucket,
+  pdfShare,
   sizeBucket,
   WARN_BYTES,
 } from '../../src/core/pdf/budget.ts';
@@ -45,5 +46,18 @@ describe('size budget', () => {
     [41, 'gt40'],
   ])('pageBucket(%d) = %s', (pages, bucket) => {
     expect(pageBucket(pages)).toBe(bucket);
+  });
+});
+
+describe('pdfShare', () => {
+  it('is the share of attachment bytes that are PDFs', () => {
+    expect(pdfShare([])).toBe(0);
+    expect(
+      pdfShare([
+        { kind: 'pdf', bytes: 3 * MB },
+        { kind: 'image', bytes: 1 * MB },
+      ]),
+    ).toBe(0.75);
+    expect(pdfShare([{ kind: 'image', bytes: MB }])).toBe(0);
   });
 });

@@ -2,16 +2,21 @@
 
 import type { FunctionComponent } from 'preact';
 import type { DepositComplaintState } from '../schema.ts';
+import type { SlotUploads } from '../uploads.ts';
 import type { Issue } from '../validation.ts';
 import type { UnsupportedChars } from '../values.ts';
 import type { StepId } from './ids.ts';
 import type { PageSpec } from './pages.ts';
 
 export type Update = (recipe: (s: DepositComplaintState) => DepositComplaintState) => void;
+export type UpdateUploads = (recipe: (u: SlotUploads) => SlotUploads) => void;
 
 export interface StepProps {
   state: DepositComplaintState;
   update: Update;
+  /** Uploaded files by slot (§8.4): one store, so a slot on two pages is one slot. */
+  uploads: SlotUploads;
+  updateUploads: UpdateUploads;
   /** `fromReview` starts an edit: the page shows "Save and return to review". */
   goTo: (id: StepId, opts?: { fromReview?: boolean }) => void;
   next: () => void;

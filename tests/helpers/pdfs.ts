@@ -42,3 +42,28 @@ export async function lockedPdf(): Promise<Uint8Array> {
   );
   return doc.save();
 }
+
+export interface TextItem {
+  str: string;
+  x: number;
+  y: number;
+  width: number;
+  /** Font size, from the text matrix. */
+  size: number;
+}
+
+/** The text drawn on one page (1-based), with positions, via pdfjs (dev-only). */
+export async function pageText(bytes: Uint8Array, pageNumber: number): Promise<TextItem[]> {
+  const { getDocument } = await import('pdfjs-dist/legacy/build/pdf.mjs');
+  const task = getDocument({ data: bytes.slice(), useSystemFonts: false, verbosity: 0 });
+  const doc = await task.promise;
+  const page = await doc.getPage(pageNumber);
+  const content = await page.getTextContent();
+  const items = content.items.flatMap((item) => {
+    if (!('str' in item)) return [];
+    const [a = 0, b = 0, , , x = 0, y = 0] = item.transform as number[];
+    return [{ str: item.str, x, y, width: item.width, size: Math.hypot(a, b) }];
+  });
+  await task.destroy();
+  return items;
+}

@@ -120,6 +120,7 @@ interface InputAttrs {
   autoCapitalize?: 'off' | 'none' | 'on' | 'sentences' | 'words' | 'characters';
   pattern?: string;
   spellcheck?: boolean;
+  placeholder?: string;
   name?: string;
 }
 

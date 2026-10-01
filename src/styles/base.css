@@ -435,17 +435,35 @@ h1:focus-visible {
   font-weight: 600;
 }
 
-.signature-placeholder {
+.signature-pad {
   display: flex;
-  align-items: center;
-  justify-content: center;
-  min-height: 8rem;
-  margin-bottom: var(--space-5);
-  padding: var(--space-4);
-  border: 2px dashed var(--color-border-strong);
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--space-3);
+  margin: var(--space-3) 0;
+}
+
+/* White with black ink in both color schemes: it's ink for the PDF. */
+.signature-canvas {
+  display: block;
+  width: 100%;
+  height: 10rem;
+  border: 2px solid var(--color-border-strong);
   border-radius: var(--radius);
-  color: var(--color-text-muted);
-  text-align: center;
+  background: #ffffff;
+  touch-action: none;
+  cursor: crosshair;
+}
+
+.typed-signature-preview {
+  margin: 0 0 var(--space-4);
+}
+
+.typed-signature {
+  margin: 0;
+  font-family: Helvetica, Arial, sans-serif;
+  font-size: var(--text-xl);
+  font-style: italic;
 }
 
 .checklist li {
@@ -522,13 +540,97 @@ legend.field-label:has(.question) {
   font-weight: 600;
 }
 
-.slot-placeholder {
-  margin-top: var(--space-3);
-  padding: var(--space-4);
-  border: 2px dashed var(--color-border-strong);
-  border-radius: var(--radius);
+.upload-field {
+  margin-top: var(--space-4);
+}
+
+.file-input {
+  display: block;
+  max-width: 100%;
+  min-height: var(--touch-min);
+  font: inherit;
+}
+
+.upload-errors {
+  color: var(--color-error);
+}
+
+.file-list {
+  margin: 0 0 var(--space-4);
+  padding: 0;
+  list-style: none;
+}
+
+.file-item {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-3);
+  align-items: center;
+  padding: var(--space-3) 0;
+  border-bottom: var(--border-width) solid var(--color-border);
+}
+
+.thumb {
+  flex: none;
+  width: 4rem;
+  height: 4rem;
+  border: var(--border-width) solid var(--color-border);
+  border-radius: var(--radius-sm);
+  background: var(--color-surface);
+  object-fit: cover;
+}
+
+.thumb-gray {
+  filter: grayscale(1);
+}
+
+.thumb-pdf {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: var(--text-sm);
+  font-weight: 600;
   color: var(--color-text-muted);
-  text-align: center;
+}
+
+.file-meta {
+  display: flex;
+  flex: 1 1 10rem;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.file-name {
+  overflow-wrap: anywhere;
+}
+
+.file-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-1);
+}
+
+.size-meter {
+  margin-top: var(--space-5);
+}
+
+.size-meter meter {
+  display: block;
+  width: 100%;
+  height: 1rem;
+}
+
+.size-largest-heading {
+  margin: var(--space-3) 0 var(--space-2);
+  font-size: var(--text-base);
+}
+
+.size-largest {
+  overflow-wrap: anywhere;
+}
+
+.size-status:empty {
+  display: none;
 }
 
 /* Review */

@@ -9,6 +9,7 @@ import { deriveSlots, type SlotId } from './checklist.ts';
 import { isDisclaimerAccepted } from './disclaimer.ts';
 import type { TextPath } from './field-map.ts';
 import type { DepositComplaintState, ISODate } from './schema.ts';
+import { hasSignature } from './signature.ts';
 import type { StepId } from './steps/ids.ts';
 import { pageOfPath } from './steps/pages.ts';
 import { textValue, type UnsupportedChars } from './values.ts';
@@ -59,7 +60,7 @@ export function missingRequired(state: DepositComplaintState): Issue[] {
   text('rental.zip', rental.zip, labels.rental.zip);
   need(!isDisclaimerAccepted(state), 'disclaimer', 'disclaimer', req.disclaimer);
   need(!state.signature.statementsRead, 'statementsRead', 'sign.statements', req.statementsRead);
-  need(!state.signature.pngDataUrl, 'signature', 'sign.signature', req.signature);
+  need(!hasSignature(state.signature), 'signature', 'sign.signature', req.signature);
   return issues;
 }
 
@@ -70,7 +71,7 @@ export function canSend(state: DepositComplaintState): boolean {
 export interface WarningInputs {
   /** From collectUnsupportedChars(state, WIN_ANSI). */
   unsupportedChars: readonly UnsupportedChars[];
-  /** Files added per evidence slot (uploads arrive in Phase 4). */
+  /** Files added per derived evidence slot (slotFileCounts in uploads.ts). */
   slotFileCounts: Partial<Record<SlotId, number>>;
   /** Size of the last built packet, if any. */
   packetBytes?: number | null;

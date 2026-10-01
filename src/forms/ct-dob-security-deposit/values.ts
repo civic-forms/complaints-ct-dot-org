@@ -6,11 +6,14 @@ import { formatDateMMDDYY } from '../../core/format/date.ts';
 import { formatCents } from '../../core/format/money.ts';
 import { formatPhone } from '../../core/format/phone.ts';
 import { type Charset, sanitize } from '../../core/pdf/text.ts';
+import en from '../../i18n/en.json' with { type: 'json' };
 import { TEXT_FIELDS, type TextFieldEntry, type TextPath } from './field-map.ts';
 import type { DepositComplaintState, YesNo } from './schema.ts';
+import { typedSignatureText } from './signature.ts';
 
 export interface UnsupportedChars {
-  path: TextPath;
+  /** A text field, or the typed signature. */
+  path: TextPath | 'signature';
   /** The form's label for the field, for the Review warning. */
   label: string;
   chars: string[];
@@ -100,7 +103,23 @@ export function collectUnsupportedChars(
   state: DepositComplaintState,
   charset: Charset,
 ): UnsupportedChars[] {
-  return unsupportedOf(sanitizedTextFields(state, charset));
+  const out = unsupportedOf(sanitizedTextFields(state, charset));
+  const signature = typedSignatureChars(state, charset);
+  if (signature) out.push(signature);
+  return out;
+}
+
+/** The typed signature prints in Helvetica Oblique, which has the same charset (§14). */
+export function typedSignatureChars(
+  state: DepositComplaintState,
+  charset: Charset,
+): UnsupportedChars | null {
+  const { method, typedName } = state.signature;
+  if (method !== 'typed' || !typedName.trim()) return null;
+  const { replaced } = sanitize(typedSignatureText(typedName), charset);
+  return replaced.length
+    ? { path: 'signature', label: en.steps.sign.signatureLabel, chars: replaced }
+    : null;
 }
 
 export function unsupportedOf(fields: readonly SanitizedField[]): UnsupportedChars[] {

@@ -1,10 +1,9 @@
 // Pieces the pages share: chapter intros, the form's own text, legal help
-// links, the complaint-type confirmation, and the upload slot placeholder.
+// links, and the complaint-type confirmation.
 
 import type { ComponentChildren } from 'preact';
 import { ChoiceGroup, ExternalLink } from '../../../core/ui/fields.tsx';
 import en from '../../../i18n/en.json' with { type: 'json' };
-import { deriveSlots, type SlotId } from '../checklist.ts';
 import { LEGAL_HELP } from '../config.ts';
 import type { ComplaintType } from '../schema.ts';
 import verbatim from '../verbatim.json' with { type: 'json' };
@@ -105,24 +104,4 @@ export function confirmType(type: ComplaintType) {
       </>
     );
   };
-}
-
-/**
- * One evidence slot (§8.4). The same slot can appear on more than one page
- * (the forwarding-address slot is also on the Documents step); files will live
- * in one store keyed by slot id, so the packet index counts it once. Uploads
- * arrive in Phase 4.
- */
-export function SlotUpload({ slotId, state }: { slotId: SlotId; state: StepProps['state'] }) {
-  const slot = deriveSlots(state).find((s) => s.id === slotId);
-  if (!slot) return null;
-  return (
-    <div class="slot">
-      <p class={slot.appDefined ? 'slot-label' : 'slot-label verbatim'}>{slot.label}</p>
-      {slot.hint && <p class="field-help">({slot.hint})</p>}
-      {slot.help && <p class="field-help">{slot.help}</p>}
-      {slot.note && <p class="field-help">{slot.note}</p>}
-      <div class="slot-placeholder">{en.pages.slotPlaceholder}</div>
-    </div>
-  );
 }

@@ -1,16 +1,20 @@
 // App shell: holds the complaint state in memory and drives the wizard
 // (CLAUDE.md §7). No router: the current page is state. One question per
 // page; Continue needs the page's answer (or "Skip for now" where offered),
-// and is never disabled. Persistence arrives in Phase 5.
+// and is never disabled. Uploaded files live beside the answers, in memory;
+// persistence arrives in Phase 5.
 
 import { useEffect, useMemo, useRef, useState } from 'preact/hooks';
 import { todayIso } from '../core/format/date.ts';
 import { WIN_ANSI } from '../core/pdf/text.ts';
+import { emptyUploads } from '../core/uploads/store.ts';
+import type { SlotId } from '../forms/ct-dob-security-deposit/checklist.ts';
 import { initialState } from '../forms/ct-dob-security-deposit/schema.ts';
 import { normalizeGates } from '../forms/ct-dob-security-deposit/situation.ts';
 import type { StepId } from '../forms/ct-dob-security-deposit/steps/ids.ts';
 import { PAGES } from '../forms/ct-dob-security-deposit/steps/index.ts';
-import type { Update } from '../forms/ct-dob-security-deposit/steps/types.ts';
+import type { Update, UpdateUploads } from '../forms/ct-dob-security-deposit/steps/types.ts';
+import { slotFileCounts } from '../forms/ct-dob-security-deposit/uploads.ts';
 import { softWarnings } from '../forms/ct-dob-security-deposit/validation.ts';
 import { collectUnsupportedChars } from '../forms/ct-dob-security-deposit/values.ts';
 import en from '../i18n/en.json' with { type: 'json' };
@@ -39,6 +43,7 @@ type Edit = EditSession<StepId> & { origin: StepId };
 
 export function App() {
   const [state, setState] = useState(initialState);
+  const [uploads, setUploads] = useState(emptyUploads<SlotId>);
   const [index, setIndex] = useState(0);
   const [edit, setEdit] = useState<Edit | null>(null);
   // Bumped on each Continue without an answer, so focus moves to the error again.
@@ -46,11 +51,16 @@ export function App() {
   const firstRender = useRef(true);
 
   const update: Update = (recipe) => setState((s) => normalizeGates(recipe(s)));
+  const updateUploads: UpdateUploads = setUploads;
   const unsupported = useMemo(() => collectUnsupportedChars(state, WIN_ANSI), [state]);
   const warnings = useMemo(
     () =>
-      softWarnings(state, { unsupportedChars: unsupported, slotFileCounts: {}, today: todayIso() }),
-    [state, unsupported],
+      softWarnings(state, {
+        unsupportedChars: unsupported,
+        slotFileCounts: slotFileCounts(state, uploads),
+        today: todayIso(),
+      }),
+    [state, uploads, unsupported],
   );
 
   const page = PAGES[index] ?? PAGES[0];
@@ -167,6 +177,8 @@ export function App() {
           key={page.id}
           state={state}
           update={update}
+          uploads={uploads}
+          updateUploads={updateUploads}
           goTo={goTo}
           next={advance}
           unsupported={unsupported}

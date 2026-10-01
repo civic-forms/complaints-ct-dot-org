@@ -102,8 +102,16 @@ export interface DepositComplaintState {
   /**
    * Read and sign (§7 step 12). None of this is persisted (§9.2): the signature
    * is re-drawn, the statements re-acknowledged, and the date reset to today.
+   * Only the selected `method` prints; the other is kept in memory (§14).
    */
-  signature: { pngDataUrl: string | null; signedDate: ISODate; statementsRead: boolean };
+  signature: {
+    method: 'drawn' | 'typed';
+    pngDataUrl: string | null;
+    /** Printed as "/s/ {typedName}". Starts empty: typing it is the act of signing. */
+    typedName: string;
+    signedDate: ISODate;
+    statementsRead: boolean;
+  };
 }
 
 const emptyPerson = (): Person => ({
@@ -176,6 +184,12 @@ export function initialState(): DepositComplaintState {
       courtAction: { answer: null, docketNumber: '' },
     },
     additionalComments: '',
-    signature: { pngDataUrl: null, signedDate: null, statementsRead: false },
+    signature: {
+      method: 'drawn',
+      pngDataUrl: null,
+      typedName: '',
+      signedDate: null,
+      statementsRead: false,
+    },
   };
 }
