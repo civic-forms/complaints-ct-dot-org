@@ -1640,6 +1640,11 @@ Work phase by phase. Stop at the end of each phase and report to the maintainer.
   Renaming = change `app.name` in `i18n/en.json`.
 - Register domain; decide subdomain-per-tool vs. path (code supports both).
 - Usability test with 2–3 real tenants on their own phones before launch.
+- Before launch, on an Android phone (Chrome), on a preview deploy: Phase 5's phone checks
+  (device mode saves and restores answers and photos; Back and Forward follow
+  the wizard; the share sheet attaches the PDF, Cancel is silent, Share stays
+  disabled until Copy; erase leaves no filled page reachable). Passed on iPhone
+  in Phase 5; Android wasn't available then.
 - Choose the analytics tool (§19.1), create the free account, set
   `VITE_TELEMETRY_ENDPOINT` and `VITE_TELEMETRY_SITE_ID` in Cloudflare Pages
   (Production environment only).
