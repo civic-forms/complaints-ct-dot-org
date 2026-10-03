@@ -130,7 +130,7 @@ information in general.
 | Unit tests        | Vitest                                                                                                                       |
 | E2E               | Playwright, **one** smoke test, WebKit project only                                                                          |
 | Package manager   | pnpm, version pinned via `packageManager` in `package.json`; committed `pnpm-lock.yaml`. Supply-chain settings in §3.1       |
-| Node              | Pinned in `.nvmrc` (current LTS)                                                                                             |
+| Node              | Pinned to an exact version in `.nvmrc` (current LTS; see §16)                                                                |
 | Hosting           | Cloudflare Pages free tier, building from the repo via its Git integration (headers generated into `dist/_headers`)          |
 | Telemetry         | Hand-written sender (`fetch` keepalive / `sendBeacon`) to a cookieless analytics tool chosen later (§19). No vendor SDK      |
 | Source maps       | `build.sourcemap: true` — deployed publicly (the source is public anyway; lets anyone verify the live code matches the repo) |
@@ -1474,11 +1474,18 @@ the maintainer by Cloudflare Access; PRs use it for real-phone checks (share and
 clipboard need HTTPS). The production branch is a placeholder, `production`,
 made from the first commit, so nothing is published; at launch it is switched
 to `main`. Set `VITE_TELEMETRY_*` for the **Production** environment only, so
-preview deployments send no telemetry. The Phase 5 preview built and deployed
-with no extra build settings (no Node or pnpm version variables). Still to
-confirm from the build log (Phase 6): that Cloudflare used the pnpm version from
-`packageManager` and the Node version from `.nvmrc`; if not, set
-`NODE_VERSION` / `PNPM_VERSION` in the Pages build settings.
+preview deployments send no telemetry.
+
+Build verified on the Phase 5 preview (maintainer, from the build log), with no
+Node or pnpm version variables in the Pages settings: Cloudflare takes Node from
+`.nvmrc` and pnpm 12.6.0 from `packageManager`, the lockfile passes the §3.1
+supply-chain policies, and the bundle sizes match local builds. **`.nvmrc` holds
+an exact version** (e.g. `24.16.0`), not a major: with `24`, Cloudflare resolved
+an older 24.x than Corepack needs, and it warned `EBADENGINE`. The exact pin
+keeps Cloudflare, CI (`node-version-file: .nvmrc`), and local builds on the same
+Node; bump it deliberately. The preview's HTML was also checked by the
+maintainer: no `cloudflareinsights` script is injected (recheck after the custom
+domain is attached, §18).
 `VITE_APP_VERSION` comes from Cloudflare's commit SHA env var in production
 builds and from `git rev-parse --short HEAD` locally.
 
@@ -1574,8 +1581,8 @@ Work phase by phase. Stop at the end of each phase and report to the maintainer.
 6. **Hardening + deploy.** Telemetry module (§19) with endpoint unset by default,
    `gen-headers.ts`, public source maps, verify CSP in production build (no
    violations in console), Playwright smoke test, CI workflows (incl. keepalive),
-   Dependabot, Cloudflare Pages build verification (§16: the project is already
-   connected; just confirm the build and headers on a preview), the smoke test's
+   Dependabot, the `_headers` check on a preview (§16: the Pages build itself
+   is already verified), the smoke test's
    `cloudflareinsights` check, README (what it is,
    privacy model, how to update the form template (pointing to §5.3),
    maintenance commands, and a **form revision log** table: revision, date
