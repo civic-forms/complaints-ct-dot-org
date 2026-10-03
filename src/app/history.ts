@@ -1,9 +1,10 @@
 // Browser and phone Back (CLAUDE.md §7), with the History API and no router.
-// History holds only `{ page }`; the URL never changes. There are at most two
-// app entries: the base entry (Welcome) and one pushed entry for whatever page
-// is showing. Back lands on the base entry, and the app treats that like its
-// own Back button, then pushes again. Forward from Welcome returns to the
-// pushed page. Back on Welcome isn't intercepted, so it leaves the app.
+// History holds only `{ page }`; the URL never changes. One entry per page
+// visited: every forward move in the app (Continue, Next, Skip, an Edit link)
+// pushes an entry, and the app's Back button is `history.back()`. So the phone's
+// Back, iOS swipe-back (with a preview of the real previous page), and the
+// button are one action, and Forward redoes a Back. The first entry of a page
+// load is Welcome (the base entry); Back on Welcome leaves the app.
 //
 // These are pure decisions; App.tsx applies them.
 
@@ -14,36 +15,46 @@ export const entryPage = (state: unknown): string | null => {
   return typeof page === 'string' ? page : null;
 };
 
-export type NavOp = 'push' | 'replace' | 'back' | 'none';
-
-/** What to do to history when the app shows `to` while history is on `entry`. */
-export function navOp(entry: string | null, to: string): NavOp {
-  if (entry === to) return 'none';
-  if (to === BASE_PAGE) return entry === null ? 'replace' : 'back';
-  return entry === BASE_PAGE ? 'push' : 'replace';
-}
+/** Push an entry when the app moves to a page history isn't already on. */
+export const shouldPush = (entry: string | null, to: string): boolean =>
+  entry !== to && to !== BASE_PAGE;
 
 export type PopAction =
   | { kind: 'none' }
-  /** Back: run the app's own Back. */
-  | { kind: 'back' }
-  /** Forward (or an older entry): show that page. */
+  /** Show the entry's page. */
   | { kind: 'show'; page: string }
-  /** An entry we can't show: put Welcome back on it. */
-  | { kind: 'reset' };
+  /** A page that no longer applies, behind the current one: keep going back. */
+  | { kind: 'skipBack' }
+  /** A page that can't be shown ahead (or no page at all): stay, and relabel the entry. */
+  | { kind: 'stay' };
 
 /**
  * A popstate landed on an entry for `entry` while the app shows `current`.
  * `canShow` says whether a page may be shown now (a form has started and the
- * page applies to the answers).
+ * page applies to the answers); `order` gives a page's place in the flow.
  */
 export function popAction(
   entry: string | null,
   current: string,
   canShow: (page: string) => boolean,
+  order: (page: string) => number,
 ): PopAction {
+  if (entry === null) return { kind: 'stay' };
   if (entry === current) return { kind: 'none' };
-  if (entry === BASE_PAGE) return { kind: 'back' };
-  if (entry !== null && canShow(entry)) return { kind: 'show', page: entry };
-  return { kind: 'reset' };
+  if (entry === BASE_PAGE || canShow(entry)) return { kind: 'show', page: entry };
+  return order(entry) < order(current) ? { kind: 'skipBack' } : { kind: 'stay' };
+}
+
+/**
+ * The entries to push when a saved form resumes on `target`: every page that
+ * applies from the first one up to it, so Back walks the form, not to Welcome.
+ */
+export function resumePath<P extends { id: string }>(
+  pages: readonly P[],
+  target: number,
+  applies: (index: number) => boolean,
+): string[] {
+  const path: string[] = [];
+  for (let i = 1; i <= target; i++) if (applies(i)) path.push(pages[i]?.id ?? '');
+  return path.filter(Boolean);
 }

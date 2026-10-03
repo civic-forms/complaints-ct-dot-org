@@ -689,8 +689,8 @@ chapters show just the chapter title. The progress bar shows the chapter's
 position. Welcome and Confirmation show no progress.
 
 **Edit from Review.** Every Edit link opens the page that asks that question,
-whose primary button reads "Save and return to review" (Back and a secondary
-Next stay available). It goes straight back to Review, unless the change made
+whose primary button reads "Save and return to review" (Back, which returns to
+Review, and a secondary Next stay available). It goes straight back to Review, unless the change made
 new pages relevant and unanswered (e.g. a confirmation or follow-up). Then it
 shows an interstitial page (`review.moreInfoNeeded`, not part of the normal
 flow): "Your change means we need a bit more information before your review." plus
@@ -698,18 +698,32 @@ Continue, and walks those pages in order. The button reads "Continue" until the
 last one, which reads "Save and return to review". Pages that were already
 unanswered or skipped before the edit never start a detour.
 
-**Browser Back** (`app/history.ts`, maintainer decision). The phone's or
-browser's Back (and iOS swipe-back) moves between wizard pages by the same rules
-as the in-app Back, including the edit detour (Back from the interstitial
-returns to the edited page). History API only, no router: history state holds
-only `{ page }`, and the URL never changes. There are at most two app entries:
-the base entry (Welcome) and one pushed entry for the page showing. Leaving
-Welcome pushes; moving between other pages replaces; in-app Back to Welcome
-calls `history.back()`. A popstate onto the base entry while another page shows
-runs the app's Back and pushes again; a popstate onto a page entry while Welcome
-shows (Forward) shows that page if a form has started and the page applies.
-Back on Welcome isn't intercepted, so it leaves the app. Erase is designed with
-this so no history entry can bring back a filled-in page (§9.3).
+**Browser Back** (`app/history.ts`, maintainer decisions). Swiping and the
+phone's or browser's Back and Forward are the same as the app's Back and
+Continue. History API only, no router: history state holds only `{ page }`, and
+the URL never changes.
+
+- **One entry per page visited.** Every move forward in the app (Continue, Next,
+  Skip, the Disclaimer's button, an Edit link, a link from Send's missing list)
+  pushes an entry, right in the tap's handler: before the new page renders, so
+  iOS's swipe preview shows the page being left, and never late, so a quick Back
+  can't skip a page.
+- **The app's Back button is `history.back()`:** it returns to the previous page
+  visited, like the browser's. In the normal flow that's the previous page;
+  from an Edit page it's Review; from the interstitial it's the edited page
+  (whose edit continues). Forward redoes a Back; Continue after a Back drops the
+  forward entries, as in any browser.
+- **A popstate shows the entry's page**, with no new entry. A page that no longer
+  applies (an answer changed since) is skipped going back; going forward, the
+  app stays and relabels the entry. The interstitial shows only during an edit.
+- **The first entry of a page load is Welcome** (the base entry); Back on
+  Welcome leaves the app. "Continue your saved form" pushes an entry for each
+  page that applies up to the saved one (`resumePath`), so Back walks the form.
+- **Erase** steps back to the base entry first, so this page load's entries are
+  all forward of it and the next load prunes them (§9.3). Entries from before a
+  reload stay behind the base entry; their pages load empty after an erase, but
+  iOS may briefly show their old swipe-preview snapshots (accepted by the
+  maintainer: no position counter in history state).
 
 **Address inputs.** Each street address (tenant, landlord, rental) has a second,
 optional "Apartment, suite, or unit" box. The form has one street box, so
@@ -908,6 +922,11 @@ Tiers:
 1. **Share sheet** — if `navigator.canShare?.({ files: [file] })`: primary button
    "Send with your email app". Pass `files`, `title` (subject), `text` (body).
    Above it: DOB address with Copy button + "Paste this into the To line."
+   As built (maintainer decision): the share sheet has no recipient field, so
+   mail apps open with an empty To line. A bold note above the button says "Your
+   email app won't fill in the To line. Copy the address first, then paste it
+   into the To line.", and the button stays disabled until Copy has been tapped
+   (enabled after a failed copy too, so no one is stuck).
 2. **Download + mailto** — otherwise: primary button downloads the PDF (anchor
    with `download`), then navigates to
    `mailto:DOB.SD@CT.GOV?subject=…&body=…` (URL-encoded). Note: "Attach the
@@ -1036,12 +1055,12 @@ As built:
   it can't block the delete or reopen. The delete resolves to `deleted`,
   `blocked` (another connection; handled explicitly, and also after 1 s with no
   event), or `failed`; erase continues either way.
-- **Step 4 and history (§7):** if the current entry is the pushed one, erase goes
-  `history.back()` to the base entry first (waiting up to 300 ms for the
+- **Step 4 and history (§7):** erase steps history back one entry at a time to
+  this page load's Welcome entry (`stepBackTo`, waiting up to 300 ms for each
   popstate), sets a `security-deposit-complaint:erased` flag in sessionStorage
   (not user data), then calls `location.replace(basePath)`. On the next load the
-  app pushes one Welcome entry, which prunes the old forward entry, so neither
-  Back nor Forward reaches a pre-erase entry. A `pageshow` listener replaces
+  app pushes one Welcome entry, which prunes every entry forward of it, so
+  neither Back nor Forward reaches this page load's filled-in pages. A `pageshow` listener replaces
   the page again if the browser restores an erased page from its bfcache.
 - **Step 5, verified:** with the flag present, the next load checks that the
   database is gone, and retries the delete once if not. Success removes the flag
@@ -1063,8 +1082,8 @@ named with the storage prefix; messages carry only a type and random ids.
   connection gets `versionchange` with `newVersion === null`, as a backup) runs
   `createRemoteEraseHandler` once: `saver.stop()` first, clear its own prefixed
   sessionStorage keys, shut its database connection, revoke its object URLs,
-  reset the answers and files, and show Welcome (which takes its history back to
-  the base entry) with "Your information was erased from another tab." until
+  reset the answers and files, step its history back to its Welcome entry, and
+  show Welcome with "Your information was erased from another tab." until
   dismissed. Saving stays stopped there until its next page load: its start
   buttons call `location.replace(basePath)` first (`startOrReload`), and the
   header hides the saved indicator and the mode switch until then.
@@ -1436,9 +1455,11 @@ Keep them in sync.
   second tab's pending save never writes after the erase message; its
   session-mode data cleared; `versionchange` treated as an erase only for a
   delete; starting in an erased tab reloads instead.
-- Browser Back (§7): `navOp` / `popAction`, and a fake History driven the way
-  App.tsx drives it (Back page by page, history never grows, Welcome then
-  leaving the app, Forward from Welcome, Back from the edit interstitial).
+- Browser Back (§7): `shouldPush` / `popAction` / `resumePath`, and a fake
+  History driven the way App.tsx drives it (Back by button or browser page by
+  page, then leaving from Welcome; Forward redoes a Back and Continue drops
+  forward entries; Back from an Edit page to Review and from the interstitial
+  to the edited page; skipping a page that no longer applies); `stepBackTo`.
 - 30-day expiry logic (29, 30, 31 days, invalid).
 - No PDF build is possible before the disclaimer is accepted; Send disabled while hard requirements are missing.
 - Telemetry (§19): every event in `events.ts` validates; an event with a

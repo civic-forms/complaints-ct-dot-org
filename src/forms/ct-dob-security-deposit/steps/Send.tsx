@@ -1,6 +1,7 @@
 // Send (CLAUDE.md §7, §8.6): builds the final signed PDF on entering and
 // keeps it in memory, then offers the best way this browser has to email it:
-//   1. the share sheet (no await before navigator.share(), or Safari refuses);
+//   1. the share sheet (no await before navigator.share(), or Safari refuses),
+//      enabled once the address is copied: the sheet can't fill in the To line;
 //   2. otherwise, download + a mailto: link;
 //   3. on desktop, also an .eml draft for Outlook-style mail apps;
 //   and always a plain Download PDF link.
@@ -173,9 +174,21 @@ export function Send({ state, uploads, updateUploads, goTo }: StepProps) {
         )}
         {shareFailed && <p>{s.shareFailed}</p>}
         {tier === 'share' ? (
-          <button type="button" class="button button-primary" disabled={!built} onClick={share}>
-            {s.share}
-          </button>
+          <>
+            {/* The share sheet can't fill in the To line, so Copy comes first. */}
+            <p id="send-share-note" class="send-share-note">
+              {s.shareToNote}
+            </p>
+            <button
+              type="button"
+              class="button button-primary"
+              disabled={!built || (copyable && copied === 'idle')}
+              aria-describedby="send-share-note"
+              onClick={share}
+            >
+              {s.share}
+            </button>
+          </>
         ) : (
           <>
             <button

@@ -14,6 +14,7 @@ import {
   eraseAll,
   installBfcacheGuard,
   startOrReload,
+  stepBackTo,
 } from '../core/erase/erase.ts';
 import {
   listenToTabs,
@@ -47,7 +48,7 @@ import en from '../i18n/en.json' with { type: 'json' };
 import { t } from '../i18n/t.ts';
 import { SOURCE_URL } from './config.ts';
 import { type BootResult, createDrafts, type Failure, type Mode } from './drafts.ts';
-import { BASE_PAGE, entryPage, navOp, popAction } from './history.ts';
+import { BASE_PAGE, entryPage, popAction, resumePath, shouldPush } from './history.ts';
 import {
   canContinue,
   chapterProgress,
@@ -56,7 +57,6 @@ import {
   isRelevant,
   nextIndex,
   pendingIds,
-  prevIndex,
 } from './progress.ts';
 import { SiteHeader } from './SiteHeader.tsx';
 
@@ -86,8 +86,7 @@ interface Notices {
 
 /** What listeners registered once at load call, kept current on every render. */
 interface Handlers {
-  back: () => void;
-  show: (index: number) => void;
+  showFromHistory: (index: number) => void;
   pageId: StepId;
   canShow: (page: string) => boolean;
   reset: () => void;
@@ -97,19 +96,7 @@ interface Handlers {
 
 const NO_NOTICES: Notices = { boot: null, remote: false, storage: null, readd: [] };
 
-/** Resolves on the next popstate, or after `ms`. */
-const waitForPop = (ms: number) =>
-  new Promise<void>((resolve) => {
-    const done = () => {
-      window.removeEventListener('popstate', done);
-      clearTimeout(timer);
-      resolve();
-    };
-    const timer = setTimeout(done, ms);
-    window.addEventListener('popstate', done);
-  });
-
-const onBaseEntry = () => entryPage(history.state) === BASE_PAGE;
+const isBaseEntry = (state: unknown) => entryPage(state) === BASE_PAGE;
 
 export function App() {
   const [state, setState] = useState(initialState);
@@ -130,12 +117,13 @@ export function App() {
   const [erasing, setErasing] = useState(false);
   // Read synchronously by history and erase handlers, before a re-render.
   const erasingRef = useRef(false);
+  /** History is being stepped back to Welcome (erase): ignore its popstates. */
+  const steppingRef = useRef(false);
   const cancelCount = useRef<() => void>(() => {});
 
   // Latest handlers for listeners registered once.
   const latest = useRef<Handlers>({
-    back: () => {},
-    show: () => {},
+    showFromHistory: () => {},
     pageId: 'welcome',
     canShow: () => false,
     reset: () => {},
@@ -191,7 +179,16 @@ export function App() {
   const showError = errorTap > 0 && !answered;
   const started = state.meta.storageMode !== null;
 
-  const show = (i: number) => {
+  /**
+   * Shows page `i`. A move within the app pushes a history entry right away, in
+   * the tap's handler: before the new page renders (so iOS's swipe preview of
+   * the entry being left shows that page) and never after a quick Back.
+   */
+  const show = (i: number, opts: { fromHistory?: boolean } = {}) => {
+    const to = PAGES[i]?.id;
+    if (!opts.fromHistory && to && shouldPush(entryPage(history.state), to)) {
+      history.pushState({ page: to }, '');
+    }
     setErrorTap(0);
     if (PAGES[i]?.id === 'review') setEdit(null);
     setIndex(i);
@@ -228,15 +225,18 @@ export function App() {
     }
     advance();
   };
-  /** The app's Back; the browser's Back runs this too (history.ts). */
-  const back = () => {
-    if (edit && page.id === INTERSTITIAL) {
-      setEdit({ ...edit, detour: false });
-      show(indexOf(edit.origin));
-      return;
+  /** The app's Back is the browser's: the previous page visited (history.ts). */
+  const back = () => history.back();
+  /** Shows a page reached through history (Back, Forward, swipe), adding no entry. */
+  const showFromHistory = (i: number) => {
+    if (i === index) return;
+    if (edit) {
+      // Back from the interstitial returns to the edited page, as before the detour.
+      if (page.id === INTERSTITIAL && PAGES[i]?.id === edit.origin) {
+        setEdit({ ...edit, detour: false });
+      } else setEdit(leaving(edit));
     }
-    if (edit) setEdit(leaving(edit));
-    show(prevIndex(PAGES, index, state));
+    show(i, { fromHistory: true });
   };
   const secondaryNext = () => {
     if (edit) setEdit(leaving(edit));
@@ -267,13 +267,18 @@ export function App() {
     setDialog(null);
     setRemotelyErased(true);
     setNotices({ ...NO_NOTICES, remote: true });
+    // Back to this tab's Welcome entry, so its Back/Forward reach no filled page.
+    steppingRef.current = true;
+    void stepBackTo(history, isBaseEntry).finally(() => {
+      steppingRef.current = false;
+    });
   };
 
   latest.current = {
-    back,
-    show,
+    showFromHistory,
     pageId: page.id,
-    canShow: (id) => started && isRelevant(PAGES, indexOf(id), state),
+    canShow: (id) =>
+      id === INTERSTITIAL ? edit !== null : started && isRelevant(PAGES, indexOf(id), state),
     reset,
     remoteErase,
     storageFailed: (failure) => {
@@ -290,12 +295,12 @@ export function App() {
       latest.current.remoteErase(),
     );
     const onPop = (event: PopStateEvent) => {
-      if (erasingRef.current) return;
+      if (erasingRef.current || steppingRef.current) return;
       const current = latest.current;
-      const act = popAction(entryPage(event.state), current.pageId, current.canShow);
-      if (act.kind === 'back') current.back();
-      else if (act.kind === 'show') current.show(indexOf(act.page));
-      else if (act.kind === 'reset') history.replaceState({ page: current.pageId }, '');
+      const act = popAction(entryPage(event.state), current.pageId, current.canShow, indexOf);
+      if (act.kind === 'show') current.showFromHistory(indexOf(act.page));
+      else if (act.kind === 'skipBack') history.back();
+      else if (act.kind === 'stay') history.replaceState({ page: current.pageId }, '');
     };
     const onHide = () => void drafts.saver.flush();
     window.addEventListener('popstate', onPop);
@@ -303,7 +308,7 @@ export function App() {
 
     drafts.boot().then((result) => {
       if (result.kind === 'erased' || result.kind === 'eraseFailed') {
-        // Prune the pre-erase entry that's now forward of this one.
+        // Prune the pre-erase entries that are now forward of this one.
         history.pushState({ page: BASE_PAGE }, '');
       }
       if (result.kind === 'found') setFound(result);
@@ -322,15 +327,6 @@ export function App() {
   useEffect(() => {
     if (!booting && !erasingRef.current) drafts.update({ state, uploads, page: page.id });
   }, [state, uploads, page.id, booting]);
-
-  // Mirror the page into history: push when leaving Welcome, replace after that.
-  useEffect(() => {
-    if (booting || erasingRef.current) return;
-    const op = navOp(entryPage(history.state), page.id);
-    if (op === 'push') history.pushState({ page: page.id }, '');
-    else if (op === 'replace') history.replaceState({ page: page.id }, '');
-    else if (op === 'back') history.back();
-  }, [index, booting]);
 
   // §14: page changes move focus to the page's h1.
   useEffect(() => {
@@ -379,12 +375,16 @@ export function App() {
         const derived = new Set(deriveSlots(snapshot.state).map((s) => s.id));
         setNotices({ ...NO_NOTICES, readd: filesToReadd.filter((id) => derived.has(id)) });
         // Telemetry (Phase 6): draft_resumed.
-        const target = indexOf(snapshot.page);
-        show(
-          target > 0 && isRelevant(PAGES, target, snapshot.state)
-            ? target
-            : nextIndex(PAGES, 0, snapshot.state),
-        );
+        const saved = indexOf(snapshot.page);
+        const target =
+          saved > 0 && isRelevant(PAGES, saved, snapshot.state)
+            ? saved
+            : nextIndex(PAGES, 0, snapshot.state);
+        // An entry for each page up to the saved one, so Back walks the form.
+        const applies = (i: number) =>
+          !PAGES[i]?.detourOnly && isRelevant(PAGES, i, snapshot.state);
+        for (const id of resumePath(PAGES, target, applies)) history.pushState({ page: id }, '');
+        show(target, { fromHistory: true });
       },
     });
 
@@ -418,9 +418,7 @@ export function App() {
       deleteDb: () => deleteDatabase(services.idb, DB_NAME),
       revokeAll: revokeAllObjectUrls,
       reset,
-      onBaseEntry,
-      back: () => history.back(),
-      waitForPop,
+      backToBase: () => stepBackTo(history, isBaseEntry),
       replace: (url) => location.replace(url),
       basePath: BASE_PATH,
     });

@@ -742,6 +742,11 @@ legend.field-label:has(.question) {
   -webkit-user-select: all;
 }
 
+.send-share-note {
+  margin: 0;
+  font-weight: 600;
+}
+
 .send-status:empty {
   display: none;
 }

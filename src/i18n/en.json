@@ -115,6 +115,7 @@
       "copied": "Copied.",
       "copyFailed": "We couldn't copy it. Select the address and copy it yourself.",
       "selectToCopy": "Select the address to copy it.",
+      "shareToNote": "Your email app won't fill in the To line. Copy the address first, then paste it into the To line.",
       "share": "Send with your email app",
       "shareFailed": "Your device couldn't open the share options. Use the button below instead.",
       "mailto": "Download the PDF and open your email",

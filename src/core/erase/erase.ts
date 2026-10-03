@@ -3,7 +3,8 @@
 //
 // Order matters: other tabs are told and saving stops first, so no write can
 // land after the data is gone; history goes back to the base entry before the
-// page is replaced, so no history entry can bring back a filled-in page.
+// page is replaced, so this page load's filled-in entries are all forward of it
+// (the next load prunes them).
 
 import { clearPrefixed, type KeyValueStorage } from '../storage/draft-store.ts';
 import type { DeleteOutcome } from '../storage/idb-store.ts';
@@ -13,8 +14,6 @@ export type EraseFrom = 'header' | 'confirmation' | 'start_over';
 
 /** sessionStorage key (after the prefix) marking "erased; verify on the next load". */
 export const ERASED_KEY = 'erased';
-/** How long to wait for history.back() to land before replacing anyway. */
-const POP_WAIT_MS = 300;
 
 let erasedHere = false;
 
@@ -32,11 +31,8 @@ export interface EraseDeps {
   revokeAll: () => void;
   /** Resets the answers and the upload store, and drops any built packet. */
   reset: () => void;
-  /** Whether the current history entry is the base (Welcome) entry. */
-  onBaseEntry: () => boolean;
-  back: () => void;
-  /** Resolves on the next popstate, or after `ms`. */
-  waitForPop: (ms: number) => Promise<void>;
+  /** Steps history back to this page load's base (Welcome) entry. */
+  backToBase: () => Promise<void>;
   replace: (url: string) => void;
   basePath: string;
 }
@@ -52,13 +48,9 @@ export async function eraseAll(d: EraseDeps): Promise<DeleteOutcome> {
   // 2–3. Object URLs, then the answers and files in memory.
   d.revokeAll();
   d.reset();
-  // 4. Back to the base entry, so the filled-in entry is only ever forward
-  // (the next load prunes it), then a fresh load.
-  if (!d.onBaseEntry()) {
-    const popped = d.waitForPop(POP_WAIT_MS);
-    d.back();
-    await popped;
-  }
+  // 4. Back to the base entry, so the filled-in entries are only ever forward
+  // (the next load prunes them), then a fresh load.
+  await d.backToBase();
   try {
     d.session?.setItem(d.prefix + ERASED_KEY, '1');
   } catch {
@@ -124,6 +116,39 @@ export function createRemoteEraseHandler(d: {
     d.reset();
     return true;
   };
+}
+
+/** Resolves on the next popstate, or after `ms`. */
+export function waitForPop(ms: number): Promise<void> {
+  return new Promise((resolve) => {
+    const done = () => {
+      window.removeEventListener('popstate', done);
+      clearTimeout(timer);
+      resolve();
+    };
+    const timer = setTimeout(done, ms);
+    window.addEventListener('popstate', done);
+  });
+}
+
+/**
+ * Steps back one entry at a time until history is on an entry for `basePage`.
+ * Each step waits for its popstate (300 ms at most). Stops after `maxSteps`, or
+ * when a step lands nowhere new.
+ */
+export async function stepBackTo(
+  history: Pick<History, 'back' | 'state'>,
+  isBase: (state: unknown) => boolean,
+  wait: (ms: number) => Promise<void> = waitForPop,
+  maxSteps = 200,
+): Promise<void> {
+  for (let i = 0; i < maxSteps && !isBase(history.state); i++) {
+    const before = history.state;
+    const popped = wait(300);
+    history.back();
+    await popped;
+    if (history.state === before) return;
+  }
 }
 
 /**

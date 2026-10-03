@@ -55,10 +55,8 @@ function eraseDeps(opts: { onBase: boolean; session?: MemoryStorage }) {
       },
       revokeAll: () => log.push('revoke urls'),
       reset: () => log.push('reset'),
-      onBaseEntry: () => opts.onBase,
-      back: () => log.push('history back'),
-      waitForPop: async () => {
-        log.push('wait for pop');
+      backToBase: async () => {
+        if (!opts.onBase) log.push('back to welcome');
       },
       replace: (url: string) => log.push(`replace ${url}`),
       basePath: '/base/',
@@ -80,8 +78,7 @@ describe('the erase routine', () => {
       'delete db',
       'revoke urls',
       'reset',
-      'wait for pop',
-      'history back',
+      'back to welcome',
       'replace /base/',
     ]);
     // Both backends cleared; only the erased flag (not user data) is left.
@@ -93,7 +90,7 @@ describe('the erase routine', () => {
   it('does not go back when already on the base entry', async () => {
     const { deps, log } = eraseDeps({ onBase: true });
     await eraseAll(deps);
-    expect(log).not.toContain('history back');
+    expect(log).not.toContain('back to welcome');
     expect(log.at(-1)).toBe('replace /base/');
   });
 });
