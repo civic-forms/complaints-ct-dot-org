@@ -7,7 +7,8 @@ import en from '../../../i18n/en.json' with { type: 'json' };
 import type { DepositComplaintState } from '../schema.ts';
 import verbatim from '../verbatim.json' with { type: 'json' };
 import { kit } from './kit.ts';
-import { FormText, SlotUpload } from './shared.tsx';
+import { FormText } from './shared.tsx';
+import { SlotUpload } from './slot-upload.tsx';
 import type { StepProps } from './types.ts';
 import { APP_YES_NO, APP_YES_NO_NOT_SURE } from './yes-no.ts';
 
@@ -41,10 +42,10 @@ export const FwdGiven = fwdQuestion('fwdGiven', false);
 export const FwdInWriting = fwdQuestion('fwdInWriting', true);
 export const FwdProofAvailable = fwdQuestion('fwdProofAvailable', true);
 
-export function ForwardingAddressSlot({ state }: StepProps) {
+export function ForwardingAddressSlot(props: StepProps) {
   return (
     <>
-      <SlotUpload slotId="forwardingAddress" state={state} />
+      <SlotUpload slotId="forwardingAddress" {...props} />
       <p class="field-help">{en.pages.slotShared}</p>
     </>
   );

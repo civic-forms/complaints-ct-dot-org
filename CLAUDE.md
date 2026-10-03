@@ -122,7 +122,7 @@ information in general.
 | UI                | Preact (hooks; no router library — wizard step is state)                                                                     |
 | Styling           | Plain CSS with custom properties (design tokens). No CSS framework, no component library                                     |
 | PDF               | `pdf-lib`                                                                                                                    |
-| Font              | PDF: pdf-lib standard fonts Helvetica / Helvetica-Bold (WinAnsi encoding); no font files are bundled or embedded (§8.2)      |
+| Font              | PDF: pdf-lib standard fonts Helvetica / Helvetica-Bold / Helvetica-Oblique (typed signature, §14), WinAnsi; nothing embedded |
 | UI font           | System font stack, no font files. Set only via tokens `--font-body` / `--font-heading` in `tokens.css` (§14)                 |
 | Signature         | Hand-written canvas component (Pointer Events) — no library                                                                  |
 | Image compression | Hand-written canvas pipeline — no library                                                                                    |
@@ -203,14 +203,17 @@ Edge. Accessibility target: **WCAG 2.1 AA**.
 │  │  ├─ pdf/                   (assemble.ts packet assembly; text.ts sanitize + fitting;
 │  │  │                          acroform.ts checkbox/text helpers; pages.ts continuation,
 │  │  │                          index, exhibit pages; budget.ts size budget; errors.ts)
-│  │  ├─ images/                (decode, orient, resize, compress)
-│  │  ├─ signature/             (canvas pad → trimmed PNG)
+│  │  ├─ images/                (compress.ts decode at reduced size + orient + JPEG color/gray;
+│  │  │                          paint.ts white fill + luminance; geometry.ts; presets.ts)
+│  │  ├─ uploads/               (store.ts upload store keyed by slot, pure reducers;
+│  │  │                          ingest.ts File → UploadedFile or a handled error)
+│  │  ├─ signature/             (SignaturePad.tsx canvas pad → trimmed PNG; trim.ts)
 │  │  ├─ send/                  (share sheet, mailto, .eml builder)
 │  │  ├─ storage/               (draftStore interface + session/IndexedDB backends)
 │  │  ├─ erase/                 (erase routine + dialog)
 │  │  ├─ format/                (dates, money, phone, address: State/Zip normalizers)
 │  │  ├─ telemetry/             (events.ts allowlist, sender, error capture, §19)
-│  │  ├─ ui/                    (fields.tsx: shared field components; copy via props)
+│  │  ├─ ui/                    (fields.tsx: shared field components; size-meter.tsx; copy via props)
 │  │  └─ blob-urls.ts           (object URL registry, revoked by erase §9.3)
 │  ├─ forms/
 │  │  └─ ct-dob-security-deposit/
@@ -219,7 +222,10 @@ Edge. Accessibility target: **WCAG 2.1 AA**.
 │  │     │  ├─ template.sha256
 │  │     │  └─ loader.ts        (the only importer of the PDF: `?inline`, decoded in memory, §8)
 │  │     ├─ assets.ts           (loadPdfAssets(): lazy, memoized import of loader.ts)
-│  │     ├─ preview.ts          (lazy entry for the UI: buildPacket(state, files, mode))
+│  │     ├─ preview.ts          (lazy entry for the UI: buildPacket(state, uploads, mode))
+│  │     ├─ uploads.ts          (the upload store as the form uses it: derived slots only,
+│  │     │                       grayscale per slot, file counts, size estimate, packet bytes)
+│  │     ├─ signature.ts        (hasSignature, typed "/s/" text)
 │  │     ├─ schema.ts           (state types + initial state)
 │  │     ├─ field-map.ts         (schema path → AcroForm field OR coordinates)
 │  │     ├─ values.ts           (textValue + per-field sanitize; no pdf-lib; live char check)
@@ -234,9 +240,9 @@ Edge. Accessibility target: **WCAG 2.1 AA**.
 │  │     │                       https://portal.ct.gov/Government/Cities-and-Towns)
 │  │     ├─ steps/              (ids.ts chapter + page ids; pages.ts UI-free registry: relevance,
 │  │     │                       answer rules, fills; index.ts adds titles + components; one file
-│  │     │                       per chapter; shared.tsx: intros, FormText, LegalHelp, ConfirmType,
-│  │     │                       SlotUpload)
-│  │     └─ config.ts           (DOB email, phones, form URL, filename pattern)
+│  │     │                       per chapter; shared.tsx: intros, FormText, LegalHelp, ConfirmType;
+│  │     │                       slot-upload.tsx: SlotUpload; packet-size.tsx: meter + Compress more)
+│  │     └─ config.ts           (DOB email, phones, form URL, filename pattern, size overhead)
 │  ├─ i18n/
 │  │  ├─ en.json                (ALL UI strings; no hard-coded copy in components)
 │  │  └─ t.ts                   (`{placeholder}` filling; `{appName}`/`{operator}` from `app`)
@@ -474,7 +480,9 @@ interface DepositComplaintState {
     fwdProofAvailable: YesNoNotSure;
   };
   signature: {
+    method: 'drawn' | 'typed'; // only the selected method prints (§14)
     pngDataUrl: string | null;
+    typedName: string; // printed as "/s/ {typedName}"; starts empty, never prefilled
     signedDate: ISODate;
     statementsRead: boolean; // "I have read the statements above" (§6.3 hard requirement)
   };
@@ -801,11 +809,21 @@ want shared."
   retake/export as JPEG. Resize to max 1600px on the long edge, re-encode to
   JPEG at quality 0.7 via `canvas.toBlob`. **Compress immediately on add** and
   discard the original, to keep memory low.
+  As built: the size after orientation is read first (an `<img>` on a registered
+  object URL), then `createImageBitmap` decodes at the target size
+  (`resizeWidth`/`resizeHeight`, `resizeQuality: "high"`). If the size can't be
+  read, the options throw, or the result has the wrong shape (orientation
+  applied after the resize), it falls back to a full decode resized on the
+  canvas. The canvas is filled white before drawing, so transparent PNGs don't
+  turn black in the JPEG. Files are added one at a time.
 - **Grayscale per slot:** a toggle on each slot. Default **on** for document
   slots (receipts, lease, letters, certified mail receipts, ID), **off** for the
   "Other documents" slot (condition photos need color). Implemented in the same
-  canvas pass (luminance conversion before `toBlob`). Toggling re-encodes that
-  slot's images from the already-compressed copy only if needed; keep it simple.
+  canvas pass (luminance conversion before `toBlob`).
+  As built: each image keeps a color and a grayscale JPEG, both from the one
+  decode on add, so the toggle is instant and reversible without the original;
+  the packet uses the one the toggle selects. Thumbnails show the color copy with
+  a CSS grayscale filter when the toggle is on.
 - **PDFs:** load with pdf-lib and `copyPages` into the packet. Encrypted or
   unreadable PDFs → clear error ("This PDF is locked. Try taking a photo or
   screenshot of it instead.").
@@ -817,10 +835,17 @@ Complaint · Attachment {n} of {N}: {slot label} · page {p} of {P}`. Image
   label, file count, and page range.
 - **Size budget:** live meter. Warn at 8 MB; **hard cap 10 MB** for the final PDF
   (base64 email encoding adds ~33%). Over the cap: offer "Compress more"
-  (re-encode all images at 1200px / q0.6) and list the largest attachments so the
+  (re-encode all images at 1200px / q0.6, from their compressed color copy) and list
+  the largest attachments (with Remove) so the
   user can remove pages. **Splitting into multiple emails is deliberately
   deferred**; revisit only if telemetry shows `packet_built` with `over10mb`
   happening often.
+  As built: the meter shows on every slot page as an estimate (attachments as
+  stored plus `FORM_OVERHEAD_BYTES`, measured from a no-attachment packet) and on
+  Review as the built preview's real size. When PDFs are more than half of the
+  attachment bytes, it adds a neutral note that Compress more only shrinks
+  photos, and that removing pages or adding a photo instead of a PDF can also
+  reduce the size; it never says which document to remove.
 
 ### 8.6 Send (`core/send/`)
 
@@ -1223,9 +1248,16 @@ Keep them in sync.
   `aria-describedby`; step changes move focus to the step heading.
 - Plain, calm language (~8th-grade reading level) in app copy. Legal text stays verbatim.
 - Signature pad: Pointer Events, `touch-action: none` on the canvas, "Clear"
-  button, keyboard-accessible alternative note (typed name is not a substitute
-  for the drawn signature on the form; flag this for maintainer decision if an
-  accessibility alternative is needed).
+  button. Black ink on a white pad in both color schemes. Each stroke exports the
+  signature cropped to its ink as a transparent PNG; the pad redraws it on a
+  later visit in the same session.
+- Typed signature (accessibility alternative, maintainer decision): drawing is
+  the default; "Can't draw a signature? Type your name instead" switches to a
+  text field, and the form gets `/s/ {name}` in Helvetica Oblique on the
+  signature line (a PDF standard font, so nothing is embedded). Only the selected
+  method prints and satisfies the §6.3 signature requirement; the other is kept
+  in memory. The field starts empty, with a placeholder, and is never filled in
+  from the name the user gave earlier: typing it is the act of signing.
 - Aesthetic: calm, trustworthy, clearly **not** a government site.
 
 ---
@@ -1247,6 +1279,14 @@ Keep them in sync.
   Review edit detour; other deposit No → `$0.00`; landlord address attributes;
   169 towns; no "box N" names outside `field-map.ts`.
 - Follow-up rule (§6.2): hidden follow-ups not rendered.
+- Uploads (§8.4, §8.5): `fitWithin` and aspect checks; white fill before
+  drawing; luminance; store reducers (add, move, remove, replace); a removed
+  image's thumbnail URL revoked; only derived slots counted, sized, and embedded;
+  the grayscale default and override; the shared forwarding-address slot in the
+  packet once; `pdfShare`.
+- Signature (§14): ink bounds and padding; only the selected method counts;
+  a typed signature prints `/s/ {name}` on the line next to the date, shrinks to
+  fit, and reports unprintable characters; the preview stays unsigned.
 - Text fitting: shrink behaviour and overflow → continuation page.
 - Fill round-trip: build a packet from fixture state, reload with pdf-lib, assert
   page count and (if AcroForm, before flatten) field values.
@@ -1394,7 +1434,8 @@ Work phase by phase. Stop at the end of each phase and report to the maintainer.
 ## 18. Maintainer to-dos (outside the code)
 
 - Call DOB (860-240-8170 / 1-800-831-7225): confirm max attachment size and that
-  drawn e-signatures are acceptable; ask whether they want documents beyond the
+  drawn e-signatures are acceptable; ask whether DOB accepts a typed `/s/ {name}`
+  signature (the accessibility alternative, §14); ask whether they want documents beyond the
   page 3 checklist (e.g. move-in/move-out condition photos) attached to an initial
   complaint; ask which phone number tenants should call about security deposit
   complaints (the form lists (860) 240-8154, DOB's web page lists 860-240-8170

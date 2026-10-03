@@ -69,6 +69,28 @@ describe('hard requirements (§6.3)', () => {
     expect(canSend(ready(type1NoAnswers))).toBe(true);
   });
 
+  it('accepts a typed signature in place of a drawn one (§14)', () => {
+    const state = ready(type1NoAnswers);
+    const typed = (typedName: string): DepositComplaintState => ({
+      ...state,
+      signature: { ...state.signature, method: 'typed', pngDataUrl: null, typedName },
+    });
+    expect(canSend(typed('Jane Doe'))).toBe(true);
+    expect(ids(missingRequired(typed(' ')))).toEqual(['signature']);
+  });
+
+  it('warns about characters a typed signature cannot print', () => {
+    const state = makeState({ signature: { method: 'typed', typedName: 'Łukasz' } });
+    expect(warnings(state).filter((i) => i.id === 'chars.signature')).toEqual([
+      {
+        id: 'chars.signature',
+        step: 'sign.signature',
+        label: 'Signature',
+        message: "The form can't print 'Ł'. Please use a plain letter instead.",
+      },
+    ]);
+  });
+
   it.each([
     [
       'signature',

@@ -12,10 +12,12 @@ import en from '../../../i18n/en.json' with { type: 'json' };
 import { isDisclaimerAccepted } from '../disclaimer.ts';
 import type { TextPath } from '../field-map.ts';
 import { COMPLAINT_TYPES, type DepositComplaintState, type YesNoNotSure } from '../schema.ts';
+import { slotFileCounts } from '../uploads.ts';
 import { type Issue, missingRequired, softWarnings } from '../validation.ts';
 import { textValue } from '../values.ts';
 import verbatim from '../verbatim.json' with { type: 'json' };
 import { CHAPTER_IDS, type ChapterId, type StepId } from './ids.ts';
+import { PacketSize } from './packet-size.tsx';
 import { type FormPath, pageOfPath, specOf } from './pages.ts';
 import type { StepProps } from './types.ts';
 
@@ -228,20 +230,21 @@ function IssueList({ issues, goTo }: { issues: readonly Issue[]; goTo: GoTo }) {
   );
 }
 
-export function Review({ state, goTo, unsupported }: StepProps) {
+export function Review({ state, goTo, unsupported, uploads, updateUploads }: StepProps) {
   const accepted = isDisclaimerAccepted(state);
   const [preview, setPreview] = useState<Preview>({ status: 'idle' });
   const [attempt, setAttempt] = useState(0);
 
-  // Build the unsigned preview on entering. A build finishing after the user
-  // has left is ignored and its URL never created.
+  // Build the unsigned preview on entering, and again if the files change here
+  // ("Compress more" or Remove). A build finishing after the user has left, or
+  // after a newer one started, is ignored and its URL never created.
   useEffect(() => {
     if (!accepted) return;
     let active = true;
     let url: string | null = null;
     setPreview({ status: 'building' });
     import('../preview.ts')
-      .then((m) => m.buildPacket(state, {}, 'preview'))
+      .then((m) => m.buildPacket(state, uploads, 'preview'))
       .then((packet) => {
         if (!active) return;
         url = createObjectUrl(
@@ -256,12 +259,12 @@ export function Review({ state, goTo, unsupported }: StepProps) {
       active = false;
       if (url) revokeObjectUrl(url);
     };
-  }, [attempt]);
+  }, [attempt, uploads]);
 
   const missing = missingRequired(state);
   const warnings = softWarnings(state, {
     unsupportedChars: unsupported,
-    slotFileCounts: {},
+    slotFileCounts: slotFileCounts(state, uploads),
     packetBytes: preview.status === 'ready' ? preview.bytes : null,
     today: todayIso(),
   });
@@ -303,6 +306,14 @@ export function Review({ state, goTo, unsupported }: StepProps) {
           </a>
         )}
       </section>
+      {preview.status === 'ready' && (
+        <PacketSize
+          state={state}
+          uploads={uploads}
+          updateUploads={updateUploads}
+          actualBytes={preview.bytes}
+        />
+      )}
 
       <section class="section" aria-labelledby="missing-heading">
         <h2 id="missing-heading">{r.missingHeading}</h2>

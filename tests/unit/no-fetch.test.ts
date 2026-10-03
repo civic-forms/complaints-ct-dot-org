@@ -5,6 +5,7 @@
 import { readdirSync, readFileSync } from 'node:fs';
 import { join, relative } from 'node:path';
 import { afterEach, describe, expect, it, vi } from 'vitest';
+import { emptyUploads } from '../../src/core/uploads/store.ts';
 import { buildPacket } from '../../src/forms/ct-dob-security-deposit/preview.ts';
 import { type23AllYes } from '../fixtures/states.ts';
 import { pngDataUrl, signaturePng } from '../helpers/png.ts';
@@ -41,8 +42,8 @@ describe('no network requests for app assets', () => {
 
     const signed = structuredClone(type23AllYes);
     signed.signature.pngDataUrl = pngDataUrl(signaturePng());
-    const preview = await buildPacket(type23AllYes, {}, 'preview');
-    const final = await buildPacket(signed, {}, 'final');
+    const preview = await buildPacket(type23AllYes, emptyUploads(), 'preview');
+    const final = await buildPacket(signed, emptyUploads(), 'final');
 
     expect(preview.bytes.length).toBeGreaterThan(0);
     expect(final.bytes.length).toBeGreaterThan(0);

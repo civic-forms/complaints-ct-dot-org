@@ -39,3 +39,10 @@ export const TEMPLATE_FILENAME = 'sdcompform-rev-2026.pdf';
  * bumped on every text change. No PDF is built until this version is accepted.
  */
 export const DISCLAIMER_VERSION = 'v0';
+
+/**
+ * The packet's size before attachments, for the live size meter (§8.5). A
+ * signed packet with no attachments is about 329 KB (`pnpm samples`); rounded
+ * up so the estimate errs high. Review shows the real size of the built PDF.
+ */
+export const FORM_OVERHEAD_BYTES = 340 * 1024;

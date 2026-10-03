@@ -2,7 +2,11 @@ import { PDFDocument } from 'pdf-lib';
 import { describe, expect, it } from 'vitest';
 import { PdfLockedError, PdfUnreadableError } from '../../src/core/pdf/errors.ts';
 import type { AttachmentFile } from '../../src/core/pdf/pages.ts';
-import { TEXT_FIELDS } from '../../src/forms/ct-dob-security-deposit/field-map.ts';
+import {
+  SIGNATURE_BOX,
+  SIGNED_DATE,
+  TEXT_FIELDS,
+} from '../../src/forms/ct-dob-security-deposit/field-map.ts';
 
 import {
   buildComplaintPacket,
@@ -11,7 +15,10 @@ import {
   SignatureMissingError,
   type SlotFiles,
 } from '../../src/forms/ct-dob-security-deposit/packet.ts';
-import { initialState } from '../../src/forms/ct-dob-security-deposit/schema.ts';
+import {
+  type DepositComplaintState,
+  initialState,
+} from '../../src/forms/ct-dob-security-deposit/schema.ts';
 import { textValue } from '../../src/forms/ct-dob-security-deposit/values.ts';
 import {
   makeState,
@@ -21,7 +28,7 @@ import {
   type23AllYes,
 } from '../fixtures/states.ts';
 import { loadAssets, read } from '../helpers/assets.ts';
-import { lockedPdf, sampleAttachmentPdf } from '../helpers/pdfs.ts';
+import { lockedPdf, pageText, sampleAttachmentPdf } from '../helpers/pdfs.ts';
 import { pngDataUrl, signaturePng } from '../helpers/png.ts';
 
 const assets = loadAssets();
@@ -215,5 +222,62 @@ describe('packetFilename', () => {
     expect(packetFilename(makeState(), '2026-09-27')).toBe(
       'CT-Security-Deposit-Complaint_2026-09-27.pdf',
     );
+  });
+});
+
+describe('typed signature (§14)', () => {
+  const typed = (name: string, date = '2026-09-30'): DepositComplaintState => {
+    const copy = structuredClone(noAttachments);
+    copy.signature = { ...copy.signature, method: 'typed', typedName: name, signedDate: date };
+    return copy;
+  };
+  const signatureLine = async (bytes: Uint8Array) =>
+    (await pageText(bytes, SIGNATURE_BOX.pageIndex + 1)).filter(
+      (item) => Math.abs(item.y - SIGNED_DATE.baseline) < 1,
+    );
+
+  it('prints "/s/ {name}" on the signature line, next to the date', async () => {
+    const packet = await buildComplaintPacket(typed('Jane Doe'), {}, { mode: 'final', assets });
+    const items = await signatureLine(packet.bytes);
+    const sig = items.find((i) => i.str.startsWith('/s/'));
+    expect(sig).toMatchObject({ str: '/s/ Jane Doe', size: 12 });
+    expect(sig?.x).toBeCloseTo(SIGNATURE_BOX.x, 1);
+    expect(items.find((i) => i.str === '09/30/26')?.x).toBeCloseTo(SIGNED_DATE.x, 1);
+  });
+
+  it('shrinks a long name to fit the signature box', async () => {
+    const name = 'Maximiliana Alexandrina Wolfeschlegelsteinhausen-Bergerdorff';
+    const packet = await buildComplaintPacket(typed(name), {}, { mode: 'final', assets });
+    const sig = (await signatureLine(packet.bytes)).find((i) => i.str.startsWith('/s/'));
+    expect(sig?.size).toBeLessThan(12);
+    expect(sig?.size).toBeGreaterThanOrEqual(7);
+    expect(sig?.width).toBeLessThanOrEqual(SIGNATURE_BOX.maxWidth + 0.5);
+  });
+
+  it('reports characters it prints as "?"', async () => {
+    const packet = await buildComplaintPacket(typed('Łukasz Nowak'), {}, { mode: 'final', assets });
+    expect(packet.unsupportedChars).toContainEqual({
+      path: 'signature',
+      label: 'Signature',
+      chars: ['Ł'],
+    });
+  });
+
+  it('needs the selected method’s signature for the final packet', async () => {
+    await expect(
+      buildComplaintPacket(typed('  '), {}, { mode: 'final', assets }),
+    ).rejects.toBeInstanceOf(SignatureMissingError);
+    // A drawn signature doesn't count while "typed" is selected, and vice versa.
+    const typedOnly = typed('Jane Doe');
+    typedOnly.signature.method = 'drawn';
+    await expect(
+      buildComplaintPacket(typedOnly, {}, { mode: 'final', assets }),
+    ).rejects.toBeInstanceOf(SignatureMissingError);
+  });
+
+  it('leaves the preview unsigned', async () => {
+    const packet = await buildComplaintPacket(typed('Jane Doe'), {}, { mode: 'preview', assets });
+    const items = await signatureLine(packet.bytes);
+    expect(items.some((i) => i.str.startsWith('/s/'))).toBe(false);
   });
 });

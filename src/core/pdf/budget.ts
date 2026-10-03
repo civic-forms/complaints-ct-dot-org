@@ -20,6 +20,17 @@ export function largestAttachments<T extends { bytes: number }>(items: readonly 
   return [...items].sort((a, b) => b.bytes - a.bytes).slice(0, limit);
 }
 
+/**
+ * Share of the attachment bytes that are PDFs (0–1). "Compress more" only
+ * shrinks photos, so the meter says so when PDFs are most of the size.
+ */
+export function pdfShare(items: readonly { kind: 'image' | 'pdf'; bytes: number }[]): number {
+  const total = items.reduce((sum, item) => sum + item.bytes, 0);
+  if (total === 0) return 0;
+  const pdf = items.reduce((sum, item) => sum + (item.kind === 'pdf' ? item.bytes : 0), 0);
+  return pdf / total;
+}
+
 export type SizeBucket = 'lt2mb' | '2to5mb' | '5to8mb' | '8to10mb' | 'over10mb';
 export type PageBucket = 'lt10' | '10to20' | '20to40' | 'gt40';
 

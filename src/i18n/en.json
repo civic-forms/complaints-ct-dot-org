@@ -81,9 +81,19 @@
     },
     "sign": {
       "readCheckbox": "I have read the statements above",
-      "signaturePlaceholder": "The signature pad is coming in the next update.",
       "dateLabel": "Date",
-      "dateHelp": "This is set to today's date each time you open this step."
+      "dateHelp": "This is set to today's date each time you open this step.",
+      "signatureLabel": "Signature",
+      "drawLabel": "Draw your signature",
+      "drawHelp": "Use your finger, a stylus, or a mouse in the box below.",
+      "padLabel": "Signature box",
+      "clear": "Clear",
+      "useTyped": "Can't draw a signature? Type your name instead",
+      "useDrawn": "Draw your signature instead",
+      "typedLabel": "Type your full name",
+      "typedHelp": "Your typed name is your signature. It prints on the form as /s/ followed by your name.",
+      "typedPlaceholder": "Your full name",
+      "typedPreview": "On the form, your signature will read:"
     },
     "periodicRent": {
       "periodicRentTerm": "Periodic rent",
@@ -228,6 +238,46 @@
     "correspondenceHint": "include the envelope",
     "proofOfAgeNote": "The form says the Department may share your documents with your landlord. You may cover information you don't want shared."
   },
+  "upload": {
+    "addLabel": "Add photos or PDFs",
+    "addHelp": "You can add more than one file. Photos are made smaller as they're added.",
+    "adding": "Adding file {n} of {total}…",
+    "done": "Finished adding files.",
+    "removed": "Removed {name}.",
+    "pageOne": "1 page",
+    "pageMany": "{count} pages",
+    "fileOne": "1 file",
+    "fileMany": "{count} files",
+    "slotSummary": "{files}, {pages}",
+    "pdfBadge": "PDF",
+    "moveUp": "Move up",
+    "moveDown": "Move down",
+    "remove": "Remove",
+    "grayscale": "Black and white (smaller file)",
+    "added": "{count} added",
+    "errors": {
+      "image_decode_failed": "{name}: We couldn't open this photo. If it's a HEIC photo from an iPhone, try taking it again or exporting it as a JPEG.",
+      "pdf_encrypted": "{name}: This PDF is locked. Try taking a photo or screenshot of it instead.",
+      "pdf_unreadable": "{name}: We couldn't read this PDF. Try taking a photo or screenshot of it instead.",
+      "unsupported_type": "{name}: This kind of file can't be added. Add a photo or a PDF.",
+      "unexpected": "{name}: Something went wrong adding this file. Please try again."
+    }
+  },
+  "sizeMeter": {
+    "label": "Packet size",
+    "estimate": "About {size} MB of {cap} MB",
+    "actual": "{size} MB of {cap} MB",
+    "warn": "Your packet is close to the {cap} MB limit.",
+    "over": "Your packet is over the {cap} MB limit, so it may be too large to email.",
+    "compressMore": "Compress more",
+    "compressHelp": "Makes your photos smaller. They may look less sharp.",
+    "compressing": "Making photos smaller…",
+    "compressed": "Your photos are now smaller.",
+    "compressFailed": "We couldn't make the photos smaller. Please try again.",
+    "pdfNote": "Compress more only makes photos smaller. Removing pages, or adding a photo of a document instead of its PDF, can also reduce the size.",
+    "largestHeading": "Largest files",
+    "largestRow": "{name} ({slot}): {size} MB"
+  },
   "errors": {
     "chooseAnswer": "Choose an answer to continue",
     "enterOrSkip": "Enter an answer or skip for now"
@@ -267,7 +317,7 @@
     },
     "documents": {
       "title": "Documents",
-      "intro": "Based on your answers, the form's checklist (page 3) asks for these documents. Adding files is coming in the next update."
+      "intro": "Based on your answers, the form's checklist (page 3) asks for these documents. You can add each one on the pages that follow, or skip any of them."
     },
     "comments": {
       "title": "Additional comments"
@@ -295,7 +345,6 @@
     "fwdInWriting": "Was it in writing?",
     "fwdProofAvailable": "Do you have a copy, or proof that you sent it?",
     "slotTitle": "Add this document",
-    "slotPlaceholder": "Adding files is coming in the next update.",
     "slotShared": "This is the same place as on the Documents step, so a file added in one place shows in both.",
     "tenantAddress": "What is your current address?",
     "landlordAddress": "What is your landlord's address?",
