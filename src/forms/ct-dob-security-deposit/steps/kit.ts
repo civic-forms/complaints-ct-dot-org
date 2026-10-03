@@ -60,7 +60,8 @@ export function addressAttrs(
 
 const TENANT_TOKENS: Record<AddressKey, string> = {
   name: 'name',
-  street: 'street-address',
+  street: 'address-line1',
+  streetLine2: 'address-line2',
   city: 'address-level2',
   state: 'address-level1',
   zip: 'postal-code',
@@ -76,4 +77,6 @@ const LANDLORD_ORDER: readonly AddressKey[] = [
   'zip',
   'daytimePhone',
   'email',
+  // Added later; last, so the earlier fields keep their ids.
+  'streetLine2',
 ];

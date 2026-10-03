@@ -44,6 +44,7 @@ export function RentalAddress(props: StepProps) {
             onClick={() =>
               k.patch('rental', {
                 unitStreet: tenant.street,
+                streetLine2: tenant.streetLine2,
                 city: tenant.city,
                 state: tenant.state,
                 zip: tenant.zip,
@@ -55,6 +56,19 @@ export function RentalAddress(props: StepProps) {
         </p>
       )}
       <TextField {...textProps('unitStreet', props)} required={true} />
+      <TextField
+        id="rental-streetLine2"
+        label={
+          <>
+            {q.streetLine2} <span class="optional">{en.common.optional}</span>
+          </>
+        }
+        value={props.state.rental.streetLine2}
+        onInput={(streetLine2) => k.patch('rental', { streetLine2 })}
+        // Prints in the form's one street box, so it shares that box's character check.
+        unprintable={k.chars('rental.unitStreet')}
+        autoComplete="off"
+      />
       <TextField {...textProps('city', props)} suggestions={towns} required={true} />
       <div class="field-row">
         <TextField {...textProps('state', props)} {...STATE_INPUT} />

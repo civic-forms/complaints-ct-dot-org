@@ -104,6 +104,7 @@
     "tenant": {
       "name": "What is your full name?",
       "street": "Street address",
+      "streetLine2": "Apartment, suite, or unit",
       "city": "City or town",
       "state": "State",
       "zip": "Zip code",
@@ -113,6 +114,7 @@
     "landlord": {
       "name": "What is your landlord's name?",
       "street": "Landlord's street address",
+      "streetLine2": "Landlord's apartment, suite, or unit",
       "city": "Landlord's city or town",
       "state": "Landlord's state",
       "zip": "Landlord's zip code",
@@ -121,6 +123,7 @@
     },
     "rental": {
       "unitStreet": "Street address",
+      "streetLine2": "Apartment, suite, or unit",
       "housingComplexName": "What is the name of the housing complex, if there is one?",
       "city": "City or town",
       "state": "State",

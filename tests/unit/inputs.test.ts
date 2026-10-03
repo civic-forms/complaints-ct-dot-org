@@ -3,16 +3,33 @@
 import { readdirSync, readFileSync, statSync } from 'node:fs';
 import { basename, join, relative } from 'node:path';
 import { describe, expect, it } from 'vitest';
+import { WIN_ANSI } from '../../src/core/pdf/text.ts';
 import towns from '../../src/forms/ct-dob-security-deposit/ct-towns.json' with { type: 'json' };
 import { addressAttrs } from '../../src/forms/ct-dob-security-deposit/steps/kit.ts';
+import { softWarnings } from '../../src/forms/ct-dob-security-deposit/validation.ts';
+import {
+  collectUnsupportedChars,
+  textValue,
+} from '../../src/forms/ct-dob-security-deposit/values.ts';
+import { makeState } from '../fixtures/states.ts';
 
-const KEYS = ['name', 'street', 'city', 'state', 'zip', 'daytimePhone', 'email'] as const;
+const KEYS = [
+  'name',
+  'street',
+  'streetLine2',
+  'city',
+  'state',
+  'zip',
+  'daytimePhone',
+  'email',
+] as const;
 
 describe('address inputs', () => {
   it('gives the tenant full autocomplete tokens', () => {
     expect(KEYS.map((k) => addressAttrs('tenant', k).autoComplete)).toEqual([
       'name',
-      'street-address',
+      'address-line1',
+      'address-line2',
       'address-level2',
       'address-level1',
       'postal-code',
@@ -80,5 +97,41 @@ describe('naming (§4)', () => {
       .filter((f) => /\bbox ?[1-4]\b/i.test(readFileSync(f, 'utf8')))
       .map((f) => relative(root, f));
     expect(offenders).toEqual([]);
+  });
+});
+
+describe('second street line', () => {
+  it('prints in the form’s one street box, after the street', () => {
+    const state = makeState({
+      tenant: { street: ' 12 Elm St ', streetLine2: ' Apt 4B ' },
+      landlord: { street: '1 Main St', streetLine2: '' },
+      rental: { unitStreet: '', streetLine2: 'Unit 3' },
+    });
+    expect(textValue('tenant.street', state)).toBe('12 Elm St, Apt 4B');
+    expect(textValue('landlord.street', state)).toBe('1 Main St');
+    expect(textValue('rental.unitStreet', state)).toBe('Unit 3');
+  });
+
+  it('is optional: an empty second line adds no warning', () => {
+    const state = makeState({ tenant: { street: '12 Elm St', streetLine2: '' } });
+    const ids = softWarnings(state, {
+      unsupportedChars: [],
+      slotFileCounts: {},
+      today: '2026-10-02',
+    }).map((w) => w.id);
+    expect(ids.some((id) => id.includes('streetLine2'))).toBe(false);
+  });
+
+  it('shares the street box’s character check', () => {
+    const state = makeState({ landlord: { street: '1 Main St', streetLine2: 'Mieszkanie 5ł' } });
+    expect(collectUnsupportedChars(state, WIN_ANSI)).toContainEqual(
+      expect.objectContaining({ path: 'landlord.street', chars: ['ł'] }),
+    );
+  });
+
+  it('keeps the landlord’s earlier field ids', () => {
+    expect(addressAttrs('landlord', 'name').id).toBe('ll-1');
+    expect(addressAttrs('landlord', 'email').id).toBe('ll-7');
+    expect(addressAttrs('landlord', 'streetLine2').id).toBe('ll-8');
   });
 });

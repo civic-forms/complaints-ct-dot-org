@@ -25,12 +25,26 @@ const joinList = (items: readonly string[]) =>
     .filter(Boolean)
     .join('; ');
 
+/** The form has one street box: "12 Elm St, Apt 4B". */
+const joinStreet = (street: string, line2: string) =>
+  [street, line2]
+    .map((part) => part.trim())
+    .filter(Boolean)
+    .join(', ');
+
 const ifYes = (answer: YesNo, value: () => string) => (answer === 'yes' ? value() : '');
 
 /** The text for a field exactly as it goes on the form ("" when not rendered). */
 export function textValue(path: TextPath, state: DepositComplaintState): string {
   const { questions: qs, rental } = state;
   switch (path) {
+    case 'tenant.street':
+    case 'landlord.street': {
+      const who = state[path === 'tenant.street' ? 'tenant' : 'landlord'];
+      return joinStreet(who.street, who.streetLine2);
+    }
+    case 'rental.unitStreet':
+      return joinStreet(rental.unitStreet, rental.streetLine2);
     case 'tenant.daytimePhone':
       return formatPhone(state.tenant.daytimePhone);
     case 'landlord.daytimePhone':

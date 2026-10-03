@@ -412,6 +412,7 @@ type Cents = number | null; // integer cents
 
 interface Address {
   street: string;
+  streetLine2: string; // apartment, suite, or unit (optional); printed after street in the one box
   city: string;
   state: string;
   zip: string;
@@ -439,6 +440,7 @@ interface DepositComplaintState {
   landlord: Address & { name: string; daytimePhone: string; email: string };
   rental: {
     unitStreet: string;
+    streetLine2: string; // as in Address
     housingComplexName: string;
     city: string;
     state: string;
@@ -683,10 +685,19 @@ Continue, and walks those pages in order. The button reads "Continue" until the
 last one, which reads "Save and return to review". Pages that were already
 unanswered or skipped before the edit never start a detour.
 
-**Address inputs.** The tenant's fields carry full `autocomplete` tokens (`name`,
-`street-address`, `address-level2`, `address-level1`, `postal-code`, `tel`,
-`email`). The landlord's fields use `autocomplete="off"` and neutral ids and
-names (`ll-1`…), so browsers don't offer the tenant's saved address there. The
+**Address inputs.** Each street address (tenant, landlord, rental) has a second,
+optional "Apartment, suite, or unit" box. The form has one street box, so
+`textValue` prints them joined ("12 Elm St, Apt 4B"); the second box shares the
+street box's character check, and the usual fitting and continuation apply. The
+split gives autofill a separate target for each address line (on iOS, a saved
+address put the unit number in the street box). The tenant's fields carry full
+`autocomplete` tokens (`name`, `address-line1`, `address-line2`,
+`address-level2`, `address-level1`, `postal-code`, `tel`, `email`). The
+landlord's fields use `autocomplete="off"` and neutral ids and names (`ll-1`…;
+the unit box, added later, is `ll-8` so the others keep their ids), so browsers
+don't offer the tenant's saved address there (maintainer decision; Safari may
+still guess from the labels when a saved address is picked). "Use the address
+you gave earlier" copies the unit too. The
 rental's City/Town suggests Connecticut's 169 towns via a `<datalist>` bundled
 as data (`ct-towns.json`, matching the State's list at
 https://portal.ct.gov/Government/Cities-and-Towns; free text still allowed). No
