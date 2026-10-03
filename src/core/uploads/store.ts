@@ -2,7 +2,7 @@
 // so a slot offered on two pages is one piece of state. Reducers are pure; the
 // caller releases a file's object URL (releaseFile) when it leaves the store.
 
-import { revokeObjectUrl } from '../blob-urls.ts';
+import { createObjectUrl, revokeObjectUrl } from '../blob-urls.ts';
 import type { ImagePreset } from '../images/presets.ts';
 
 interface FileBase {
@@ -96,4 +96,46 @@ export function replaceFiles<K extends string>(
 /** Releases what a file holds outside the store (its thumbnail URL). */
 export function releaseFile(file: UploadedFile): void {
   if (file.kind === 'image') revokeObjectUrl(file.thumbUrl);
+}
+
+/** A file as saved on the device (§9.2): both image versions, no object URL. */
+export type StoredFile =
+  | (FileBase & { kind: 'image'; color: Blob; gray: Blob; preset: ImagePreset['id'] })
+  | (FileBase & { kind: 'pdf'; pdf: Blob });
+
+export function toStored(file: UploadedFile): StoredFile {
+  if (file.kind === 'pdf') {
+    return { kind: 'pdf', id: file.id, name: file.name, pages: file.pages, pdf: file.pdf };
+  }
+  const { kind, id, name, pages, color, gray, preset } = file;
+  return { kind, id, name, pages, color, gray, preset };
+}
+
+/** A saved file back in the store, with a new thumbnail URL. Null if it doesn't look right. */
+export function fromStored(value: unknown): UploadedFile | null {
+  const v = value as Partial<Record<string, unknown>> | null;
+  if (!v || typeof v !== 'object') return null;
+  const { id, name, pages } = v;
+  if (typeof id !== 'string' || typeof name !== 'string' || typeof pages !== 'number') return null;
+  if (v.kind === 'pdf' && v.pdf instanceof Blob) {
+    return { kind: 'pdf', id, name, pages, pdf: v.pdf };
+  }
+  if (
+    v.kind === 'image' &&
+    v.color instanceof Blob &&
+    v.gray instanceof Blob &&
+    typeof v.preset === 'string'
+  ) {
+    return {
+      kind: 'image',
+      id,
+      name,
+      pages,
+      color: v.color,
+      gray: v.gray,
+      preset: v.preset as ImagePreset['id'],
+      thumbUrl: createObjectUrl(v.color),
+    };
+  }
+  return null;
 }

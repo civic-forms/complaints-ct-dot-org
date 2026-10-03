@@ -5,6 +5,7 @@
 import type { FunctionComponent } from 'preact';
 import en from '../../../i18n/en.json' with { type: 'json' };
 import { Comments } from './Comments.tsx';
+import { Confirmation } from './Confirmation.tsx';
 import { Disclaimer } from './Disclaimer.tsx';
 import {
   CheckCashed,
@@ -58,6 +59,7 @@ import {
   Terms,
   TypeOfRental,
 } from './rental.tsx';
+import { Send } from './Send.tsx';
 import { chapterIntro, confirmType } from './shared.tsx';
 import { Signature, Statements } from './sign.tsx';
 import { Age62OrOlder, MovedOut, NoTypeNote, OverLimitHeld } from './situation.tsx';
@@ -170,6 +172,8 @@ const PAGE_UI: Record<StepId, Entry> = {
   'review.moreInfoNeeded': { Component: MoreInfoNeeded, title: p.moreInfoNeededTitle },
   'sign.statements': { Component: Statements, title: c.sign.title },
   'sign.signature': { Component: Signature, title: c.sign.title },
+  send: { Component: Send, title: c.send.title },
+  confirmation: { Component: Confirmation, title: en.steps.confirmation.title, hideNext: true },
 };
 
 export const PAGES: readonly PageDef[] = PAGE_SPECS.map((spec) => ({

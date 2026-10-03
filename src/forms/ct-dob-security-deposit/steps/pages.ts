@@ -2,7 +2,7 @@
 // when it appears, what answer it needs before Continue, and which form fields
 // it is the single source for. index.ts adds titles and components.
 
-import { deriveSlots, type SlotId } from '../checklist.ts';
+import { deriveSlots, SLOT_IDS, type SlotId } from '../checklist.ts';
 import type { TextPath, YesNoQuestion } from '../field-map.ts';
 import type { ComplaintType, DepositComplaintState } from '../schema.ts';
 import { anyChecked, isChecked, isReachable } from '../situation.ts';
@@ -35,7 +35,7 @@ export interface AnswerRule {
 
 export interface PageSpec {
   id: StepId;
-  /** null only for Welcome. */
+  /** null only for Welcome and Confirmation. */
   chapter: ChapterId | null;
   /** `note`: a conditional notice, not counted in chapter progress. */
   kind: 'intro' | 'page' | 'note';
@@ -98,21 +98,6 @@ const slotPage = (slot: SlotId): PageSpec => ({
   kind: 'page',
   when: (s) => deriveSlots(s).some((d) => d.id === slot),
 });
-
-const SLOT_IDS: readonly SlotId[] = [
-  'depositProof',
-  'rentalAgreement',
-  'correspondence',
-  'forwardingAddress',
-  'proofOfAge',
-  'overageLetter62',
-  'overageLetter',
-  'escrowLetter',
-  'certifiedMailReceipt',
-  'certifiedMailReturnReceipt',
-  'cashForKeysAgreement',
-  'other',
-];
 
 const intro = (chapter: ChapterId): PageSpec => ({
   id: `${chapter}.intro` as StepId,
@@ -475,6 +460,9 @@ export const PAGE_SPECS: readonly PageSpec[] = [
   },
   { id: 'sign.statements', chapter: 'sign', kind: 'page' },
   { id: 'sign.signature', chapter: 'sign', kind: 'page', fills: ['signature', 'signedDate'] },
+  { id: 'send', chapter: 'send', kind: 'page' },
+  // Like Welcome: no chapter, so no progress.
+  { id: 'confirmation', chapter: null, kind: 'page' },
 ];
 
 const PAGE_OF_PATH = new Map<FormPath, StepId>(

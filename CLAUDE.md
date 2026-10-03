@@ -130,7 +130,7 @@ information in general.
 | Unit tests        | Vitest                                                                                                                       |
 | E2E               | Playwright, **one** smoke test, WebKit project only                                                                          |
 | Package manager   | pnpm, version pinned via `packageManager` in `package.json`; committed `pnpm-lock.yaml`. Supply-chain settings in §3.1       |
-| Node              | Pinned in `.nvmrc` (current LTS)                                                                                             |
+| Node              | Pinned to an exact version in `.nvmrc` (current LTS; see §16)                                                                |
 | Hosting           | Cloudflare Pages free tier, building from the repo via its Git integration (headers generated into `dist/_headers`)          |
 | Telemetry         | Hand-written sender (`fetch` keepalive / `sendBeacon`) to a cookieless analytics tool chosen later (§19). No vendor SDK      |
 | Source maps       | `build.sourcemap: true` — deployed publicly (the source is public anyway; lets anyone verify the live code matches the repo) |
@@ -198,7 +198,9 @@ Edge. Accessibility target: **WCAG 2.1 AA**.
 ├─ src/
 │  ├─ main.tsx
 │  ├─ app/                      (App.tsx shell + wizard controller; progress.ts pure navigation:
-│  │                             relevance, continue check, chapter progress, edit detour; config.ts)
+│  │                             relevance, continue check, chapter progress, edit detour;
+│  │                             history.ts browser Back decisions (§7); drafts.ts saving and
+│  │                             loading (§9.2); SiteHeader.tsx; config.ts)
 │  ├─ core/                     (form-agnostic, reusable across future tools)
 │  │  ├─ pdf/                   (assemble.ts packet assembly; text.ts sanitize + fitting;
 │  │  │                          acroform.ts checkbox/text helpers; pages.ts continuation,
@@ -208,9 +210,13 @@ Edge. Accessibility target: **WCAG 2.1 AA**.
 │  │  ├─ uploads/               (store.ts upload store keyed by slot, pure reducers;
 │  │  │                          ingest.ts File → UploadedFile or a handled error)
 │  │  ├─ signature/             (SignaturePad.tsx canvas pad → trimmed PNG; trim.ts)
-│  │  ├─ send/                  (share sheet, mailto, .eml builder)
-│  │  ├─ storage/               (draftStore interface + session/IndexedDB backends)
-│  │  ├─ erase/                 (erase routine + dialog)
+│  │  ├─ send/                  (capabilities.ts share/clipboard checks + tier; message.ts mailto;
+│  │  │                          eml.ts .eml builder; download.ts)
+│  │  ├─ storage/               (draft-store.ts interface + helpers; session-store.ts;
+│  │  │                          idb-store.ts IndexedDB wrapper; saver.ts debounce + stop;
+│  │  │                          expiry.ts)
+│  │  ├─ erase/                 (erase.ts routine, next-load check, remote erase;
+│  │  │                          tabs.ts BroadcastChannel ping/erase; EraseDialog.tsx)
 │  │  ├─ format/                (dates, money, phone, address: State/Zip normalizers)
 │  │  ├─ telemetry/             (events.ts allowlist, sender, error capture, §19)
 │  │  ├─ ui/                    (fields.tsx: shared field components; size-meter.tsx; copy via props)
@@ -230,7 +236,9 @@ Edge. Accessibility target: **WCAG 2.1 AA**.
 │  │     ├─ field-map.ts         (schema path → AcroForm field OR coordinates)
 │  │     ├─ values.ts           (textValue + per-field sanitize; no pdf-lib; live char check)
 │  │     ├─ fill.ts             (state → form fields: §6.2 follow-ups, fitting)
-│  │     ├─ packet.ts           (buildComplaintPacket: preview/final, disclaimer gate, filename)
+│  │     ├─ packet.ts           (buildComplaintPacket: preview/final, disclaimer gate)
+│  │     ├─ send.ts             (email subject/body, packet filename; no pdf-lib)
+│  │     ├─ draft.ts            (what a draft saves and how it reads back; storage ids)
 │  │     ├─ disclaimer.ts       (isDisclaimerAccepted / acceptDisclaimer)
 │  │     ├─ verbatim.json       (exact form text shown in UI)
 │  │     ├─ checklist.ts        (derive evidence slots from state)
@@ -241,7 +249,8 @@ Edge. Accessibility target: **WCAG 2.1 AA**.
 │  │     ├─ steps/              (ids.ts chapter + page ids; pages.ts UI-free registry: relevance,
 │  │     │                       answer rules, fills; index.ts adds titles + components; one file
 │  │     │                       per chapter; shared.tsx: intros, FormText, LegalHelp, ConfirmType;
-│  │     │                       slot-upload.tsx: SlotUpload; packet-size.tsx: meter + Compress more)
+│  │     │                       slot-upload.tsx: SlotUpload; packet-size.tsx: meter + Compress more;
+│  │     │                       Send.tsx; Confirmation.tsx)
 │  │     └─ config.ts           (DOB email, phones, form URL, filename pattern, size overhead)
 │  ├─ i18n/
 │  │  ├─ en.json                (ALL UI strings; no hard-coded copy in components)
@@ -252,7 +261,8 @@ Edge. Accessibility target: **WCAG 2.1 AA**.
 ├─ tests/
 │  ├─ unit/
 │  ├─ fixtures/                 (fictional sample states, one synthetic JPEG)
-│  ├─ helpers/                  (template loader, synthetic PNG/PDF generators)
+│  ├─ helpers/                  (template loader, synthetic PNG/PDF generators; fakes.ts: Storage,
+│  │                             BroadcastChannel hub, IndexedDB delete requests)
 │  └─ e2e/smoke.spec.ts
 └─ .github/
    ├─ workflows/ci.yml
@@ -642,7 +652,7 @@ step enum, §19.3). Pages in *italics* appear only when the condition holds.
 
 | Chapter             | Pages                                                                                                                                                                                                                                                                                                                                                                     |
 | ------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Welcome             | What the tool does, time estimate. **Short non-blocking notice:** "Not legal advice. Not a government website. We count anonymous usage to improve the tool; we never collect what you type or upload." with link to Privacy. Device choice as the two start buttons (§9.1). Link to DOB's page for the official Spanish form (fires `spanish_form_link_clicked`). Links to legal help (§12). |
+| Welcome             | What the tool does, time estimate. **Short non-blocking notice:** "Not legal advice. Not a government website. We count anonymous usage to improve the tool; we never collect what you type or upload." with link to Privacy. Device choice as the two start buttons (§9.1); with a saved draft, "Continue your saved form" / "Start over" in their place (§9.2). Link to DOB's page for the official Spanish form (fires `spanish_form_link_clicked`). Links to legal help (§12). |
 | Your situation      | Intro; moved out? *Current tenants:* 62 or older?; over-limit (one month's rent for 62+, two months' under 62); confirm type 2 or 3; confirm type 4 (no gate: every current tenant decides there); *no type checked:* "The form asks you to check at least one of these." with the four types verbatim and legal help.                                                                        |
 | Your deposit        | Intro; monthly rent; security deposit; other deposit paid? (*Yes:* amount); the form's "any part returned?" (*YES:* amount, check cashed, *former tenants:* was it the full amount?); *former tenants:* confirm type 1, *no type checked* note; interest paid? (*YES:* date/amount rows); What you'll need (derived checklist, §8.4; never blocks).                              |
 | Your new address    | *Type 1 checked:* intro; gave landlord your new address?; *Yes:* in writing?; *Yes:* copy or proof you sent it?; *Yes:* the forwarding-address upload slot. No or Not sure at any step shows the whole forwarding-address note verbatim, marked "From the official form:", and ends the chapter.                                                                            |
@@ -655,14 +665,17 @@ step enum, §19.3). Pages in *italics* appear only when the condition holds.
 | Disclaimer          | Clickwrap from §10. Two unchecked checkboxes; button disabled until both checked. Store `disclaimerVersion` + timestamp in state. **No PDF is built until this is accepted.** If a resumed draft has an older `disclaimerVersion`, show it again.                                                                                                                        |
 | Review              | HTML summary grouped by chapter with an "Edit" link on every row; missing-required list (§6.3); warnings list; "Preview PDF" (opens blob URL in new tab). Builds an **unsigned preview** PDF on entering, with a light "PREVIEW, NOT SIGNED" header on each form page. App-only answers aren't shown.                                                                     |
 | Read and sign       | Two pages: the page 2 statements verbatim with "I have read the statements above"; then the form's attestation sentence verbatim directly above the signature pad, and the date (set to today on every visit, editable while there; never persisted, §9.2). Kept separate from the disclaimer: these pages are the State's text only.                                   |
-| Send                | Builds the **final signed** PDF on entering (no preview header) and keeps it in memory; tiered send (§8.6). DOB address shown large with Copy button. Plain "Download PDF" always visible. Send disabled while §6.3 hard requirements are missing.                                                                                                                       |
-| Confirmation        | "Check your Sent folder." DOB phone numbers for follow-up. "I've sent it" → offers erase dialog. Shared-computer erase section (§9.3). "Something not working? Let us know" link (§19.5).                                                                                                                                                                                |
+| Send                | Builds the **final signed** PDF on entering (no preview header) and keeps it in memory; tiered send (§8.6). DOB address shown large with Copy button. Plain "Download PDF" always visible. Send disabled while §6.3 hard requirements are missing (the missing list, with Edit links, is shown above). Over the size warning, the `PacketSize` panel. Continue goes to Confirmation.                       |
+| Confirmation        | "Check your Sent folder." DOB phone numbers for follow-up. "I've sent it" → offers erase dialog. Shared-computer erase section (§9.3). "Something not working? Let us know" link (§19.5; added with telemetry in Phase 6).                                                                                                                                              |
 
 A chapter with nothing to ask for the user's answers is skipped whole, intro
 included.
 
-Header on every step: "Start over and erase" link (opens erase dialog) and, in
-device mode, the "Saved on this device · Erase" indicator.
+Header on every step (`SiteHeader.tsx`): "Start over and erase" link (opens erase
+dialog) and, in device mode, the "Saved on this device · Erase" indicator. Once
+a form has started, a "Saving options" disclosure holds the mode switch (§9.1)
+and, in device mode, the §9.2 note. A tab erased from another tab hides the
+indicator and the switch (§9.3).
 
 When `formUpdatePending` is `true` (§12), show a dismissible notice on the
 Welcome and Send steps: "The State recently updated this form. We're updating
@@ -676,14 +689,41 @@ chapters show just the chapter title. The progress bar shows the chapter's
 position. Welcome and Confirmation show no progress.
 
 **Edit from Review.** Every Edit link opens the page that asks that question,
-whose primary button reads "Save and return to review" (Back and a secondary
-Next stay available). It goes straight back to Review, unless the change made
+whose primary button reads "Save and return to review" (Back, which returns to
+Review, and a secondary Next stay available). It goes straight back to Review, unless the change made
 new pages relevant and unanswered (e.g. a confirmation or follow-up). Then it
 shows an interstitial page (`review.moreInfoNeeded`, not part of the normal
 flow): "Your change means we need a bit more information before your review." plus
 Continue, and walks those pages in order. The button reads "Continue" until the
 last one, which reads "Save and return to review". Pages that were already
 unanswered or skipped before the edit never start a detour.
+
+**Browser Back** (`app/history.ts`, maintainer decisions). Swiping and the
+phone's or browser's Back and Forward are the same as the app's Back and
+Continue. History API only, no router: history state holds only `{ page }`, and
+the URL never changes.
+
+- **One entry per page visited.** Every move forward in the app (Continue, Next,
+  Skip, the Disclaimer's button, an Edit link, a link from Send's missing list)
+  pushes an entry, right in the tap's handler: before the new page renders, so
+  iOS's swipe preview shows the page being left, and never late, so a quick Back
+  can't skip a page.
+- **The app's Back button is `history.back()`:** it returns to the previous page
+  visited, like the browser's. In the normal flow that's the previous page;
+  from an Edit page it's Review; from the interstitial it's the edited page
+  (whose edit continues). Forward redoes a Back; Continue after a Back drops the
+  forward entries, as in any browser.
+- **A popstate shows the entry's page**, with no new entry. A page that no longer
+  applies (an answer changed since) is skipped going back; going forward, the
+  app stays and relabels the entry. The interstitial shows only during an edit.
+- **The first entry of a page load is Welcome** (the base entry); Back on
+  Welcome leaves the app. "Continue your saved form" pushes an entry for each
+  page that applies up to the saved one (`resumePath`), so Back walks the form.
+- **Erase** steps back to the base entry first, so this page load's entries are
+  all forward of it and the next load prunes them (§9.3). Entries from before a
+  reload stay behind the base entry; their pages load empty after an erase, but
+  iOS may briefly show their old swipe-preview snapshots (accepted by the
+  maintainer: no position counter in history state).
 
 **Address inputs.** Each street address (tenant, landlord, rental) has a second,
 optional "Apartment, suite, or unit" box. The form has one street box, so
@@ -882,6 +922,11 @@ Tiers:
 1. **Share sheet** — if `navigator.canShare?.({ files: [file] })`: primary button
    "Send with your email app". Pass `files`, `title` (subject), `text` (body).
    Above it: DOB address with Copy button + "Paste this into the To line."
+   As built (maintainer decision): the share sheet has no recipient field, so
+   mail apps open with an empty To line. A bold note above the button says "Your
+   email app won't fill in the To line. Copy the address first, then paste it
+   into the To line.", and the button stays disabled until Copy has been tapped
+   (enabled after a failed copy too, so no one is stuck).
 2. **Download + mailto** — otherwise: primary button downloads the PDF (anchor
    with `download`), then navigates to
    `mailto:DOB.SD@CT.GOV?subject=…&body=…` (URL-encoded). Note: "Attach the
@@ -895,6 +940,18 @@ base64`, lines ≤ 76 chars, `Content-Disposition: attachment; filename=…`).
 4. **Always visible:** plain "Download PDF" link.
 
 Handle `AbortError` from share (user cancelled) silently (telemetry: `known_issue: share_cancelled`).
+Any other share rejection shows a short message and switches the page to tier 2.
+
+**Secure origins only.** `navigator.share` and `navigator.clipboard` exist only on
+https and localhost (`capabilities.ts` checks `isSecureContext` before touching
+them, and never throws). Over plain http (e.g. a phone on the LAN) the page
+uses tier 2, and the Copy button becomes the address as selectable text
+(`user-select: all`) with "Select the address to copy it." Tier 3 shows where
+`(hover: hover) and (pointer: fine)` matches.
+
+As built: subject, body, and filename come from `forms/…/send.ts` (no pdf-lib,
+so the main bundle stays small); `packet.ts` re-exports the filename. The
+`.eml` text part is base64 too, and its object URL is revoked after a minute.
 
 Telemetry: `send_method_used` with `share_sheet | mailto | eml | download_only`.
 
@@ -913,7 +970,10 @@ device?"**:
 > the only one who uses it")
 
 The first button is the default/primary → session mode. Changeable later from the header menu;
-switching device → session deletes the IndexedDB copy immediately.
+switching device → session deletes the IndexedDB copy immediately (as built: the
+database's two stores are emptied, not the database itself, because other tabs
+treat a deleted database as an erase, §9.3). Session → device removes the
+session copy and writes everything, files included, to IndexedDB.
 
 ### 9.2 `draftStore` (`core/storage/`)
 
@@ -948,9 +1008,39 @@ interface DraftStore {
 - Wrap all storage calls in try/catch; storage failure must degrade to
   memory-only with a notice, never crash.
 
+As built (`app/drafts.ts`, `forms/…/draft.ts`, `core/storage/`):
+
+- **Saver** (`saver.ts`): one write ~500 ms after the last change (answers,
+  files, or page), one write at a time, and a best-effort flush on `pagehide`.
+  `stop()` cancels a pending write and blocks every later one, the `pagehide`
+  flush included, until the next page load (erase uses it first). Nothing is
+  saved before a mode is chosen. A failed write switches to memory only,
+  removes the partial copy, and shows a notice (a separate one for a full disk).
+- **What's saved:** `serializeState` replaces all of `signature` with its
+  initial values; `parseState` restores it the same way, checks `formId`,
+  `schemaVersion`, and `formRevision`, fills missing keys from `initialState()`,
+  and drops unknown ones. The current page id is saved too; Continue returns to
+  it if it still applies, otherwise to the first page.
+- **Session mode** stores the answers, the page, and how many files each slot
+  had (never names or contents), so the notice after a reload lists the derived
+  slots to add files to again.
+- **Device mode:** one IndexedDB database, two object stores: `draft` (one record:
+  answers, page, slot → file-id order, grayscale overrides) and `files` (each
+  file by id: both image versions as Blobs, or the PDF). A save writes the
+  record and only new or changed files (`planFileWrites`: a file whose object
+  changed, e.g. after "Compress more", is rewritten) and deletes removed ones.
+  On load, thumbnails get new object URLs through `blob-urls.ts`. `exists()`
+  never creates the database (`indexedDB.databases()`, or an aborted upgrade).
+- **Load order:** the erase check (§9.3), then a session draft, then a device
+  draft. An expired draft is cleared and the notice shown.
+
 ### 9.3 Erase (`core/erase/`)
 
-One routine used everywhere (header link, confirmation page, "Start over"):
+One routine used everywhere (header link, confirmation page, "Start over"),
+`eraseAll` in `core/erase/erase.ts`. Erase applies to every tab of the app in
+this browser, in both modes (below). As built, before step 1: post `erase` to
+the other tabs, then `saver.stop()`, so no pending or later write (including the
+`pagehide` flush) can bring data back.
 
 1. Clear `sessionStorage` keys with the `security-deposit-complaint:` prefix **and** delete the
    IndexedDB database — both, regardless of mode.
@@ -958,6 +1048,47 @@ One routine used everywhere (header link, confirmation page, "Start over"):
 3. Drop references to PDF bytes, image blobs, signature canvas; reset state.
 4. `location.replace(basePath)` so Back can't restore the filled page from bfcache.
 5. Home screen shows "Your information has been erased."
+
+As built:
+
+- **Step 1:** this tab's database connection is shut first (and stays shut), so
+  it can't block the delete or reopen. The delete resolves to `deleted`,
+  `blocked` (another connection; handled explicitly, and also after 1 s with no
+  event), or `failed`; erase continues either way.
+- **Step 4 and history (§7):** erase steps history back one entry at a time to
+  this page load's Welcome entry (`stepBackTo`, waiting up to 300 ms for each
+  popstate), sets a `security-deposit-complaint:erased` flag in sessionStorage
+  (not user data), then calls `location.replace(basePath)`. On the next load the
+  app pushes one Welcome entry, which prunes every entry forward of it, so
+  neither Back nor Forward reaches this page load's filled-in pages. A `pageshow` listener replaces
+  the page again if the browser restores an erased page from its bfcache.
+- **Step 5, verified:** with the flag present, the next load checks that the
+  database is gone, and retries the delete once if not. Success removes the flag
+  and shows the message. If the retry is blocked or fails, Welcome shows "Some
+  information couldn't be erased. Close any other tabs with this app open, then
+  try again." with an Erase button in place of the start buttons, keeps the
+  flag, and loads no draft.
+
+**Erase across tabs** (`core/erase/tabs.ts`). Tabs talk on a `BroadcastChannel`
+named with the storage prefix; messages carry only a type and random ids.
+
+- **Before the dialog opens**, every entry point posts `ping` and collects `pong`
+  replies for a fixed 200 ms, then calls `showModal()` with its final text
+  (the opening button is `aria-busy` meanwhile): "This app is also open in 1
+  other tab. Erasing here will clear that tab too." / "… in {n} other tabs. …
+  clear those tabs too." Nothing for no other tabs. Without BroadcastChannel it
+  opens at once with "This also clears this app in any other open tabs."
+- **Every other tab that receives `erase`** (or, in device mode, whose database
+  connection gets `versionchange` with `newVersion === null`, as a backup) runs
+  `createRemoteEraseHandler` once: `saver.stop()` first, clear its own prefixed
+  sessionStorage keys, shut its database connection, revoke its object URLs,
+  reset the answers and files, step its history back to its Welcome entry, and
+  show Welcome with "Your information was erased from another tab." until
+  dismissed. Saving stays stopped there until its next page load: its start
+  buttons call `location.replace(basePath)` first (`startOrReload`), and the
+  header hides the saved indicator and the mode switch until then.
+- Only erase deletes the database; other clears (mode switch, expiry, a failed
+  save) empty it, so other tabs don't read them as an erase.
 
 Erase is always confirmed through a native `<dialog>` (`showModal()`):
 
@@ -1302,9 +1433,34 @@ Keep them in sync.
 - Fill round-trip: build a packet from fixture state, reload with pdf-lib, assert
   page count and (if AcroForm, before flatten) field values.
 - Template SHA-256 matches `template.sha256`.
-- `.eml` builder output: headers, boundary, base64 line length, CRLF.
-- Erase routine clears both storage backends.
-- 30-day expiry logic.
+- `.eml` builder output: headers, boundary, base64 line length, CRLF, RFC 2047
+  subject words; the mailto: encoding; the email subject and body; the send
+  tier and Copy on secure and insecure origins (fake `navigator`).
+- Drafts (§9.2): nothing in `signature` is ever saved or restored; session
+  drafts keep file counts, never names; `parseState` rejects other forms and
+  fills missing keys; the session store with a fake `Storage`; `planFileWrites`
+  (add, remove, reorder, replace); `toStored`/`fromStored` (a new thumbnail URL);
+  device record round trip; a session draft found after a reload; a failed save
+  switches to memory only.
+- The saver (fake timers): one write after the debounce; a save scheduled just
+  before erase never writes; nothing after `stop()`, the `pagehide` flush
+  included.
+- Erase routine (§9.3) with fakes: other tabs told and saving stopped first,
+  both storage backends cleared, URLs revoked, state reset, back to the base
+  entry before `location.replace`; the delete outcomes (`deleted`, `blocked`,
+  `failed`, silent → `blocked`); the next-load check (gone, retried and
+  deleted, retried and blocked or failed: flag kept, no draft loaded).
+- Erase across tabs (fake channel hub): counting other tabs (0, 1, several,
+  unsupported); the dialog opens only after 200 ms with its final count; a
+  second tab's pending save never writes after the erase message; its
+  session-mode data cleared; `versionchange` treated as an erase only for a
+  delete; starting in an erased tab reloads instead.
+- Browser Back (§7): `shouldPush` / `popAction` / `resumePath`, and a fake
+  History driven the way App.tsx drives it (Back by button or browser page by
+  page, then leaving from Welcome; Forward redoes a Back and Continue drops
+  forward entries; Back from an Edit page to Review and from the interstitial
+  to the edited page; skipping a page that no longer applies); `stepBackTo`.
+- 30-day expiry logic (29, 30, 31 days, invalid).
 - No PDF build is possible before the disclaimer is accepted; Send disabled while hard requirements are missing.
 - Telemetry (§19): every event in `events.ts` validates; an event with a
   non-allowlisted name or property value is dropped, not sent; stack-location
@@ -1316,7 +1472,8 @@ Keep them in sync.
 **Playwright (one smoke test, WebKit):** "Start — don't save" → fill minimal
 type-1 complaint → upload a fixture image → accept disclaimer → review → sign
 (synthetic pointer events) → send step → assert final PDF blob exists, size > 0, and fallback download link
-works. Then erase and assert storage is empty.
+works. Then erase and assert storage is empty. Also assert the served HTML
+contains no `cloudflareinsights` reference (§2.1).
 
 **Manual, each phase:** open generated PDFs and visually check alignment. Keep
 sample outputs out of the repo if they contain realistic personal data.
@@ -1329,13 +1486,27 @@ sample outputs out of the repo if they contain realistic personal data.
 `packageManager`) → `pnpm install --frozen-lockfile` → `biome check` →
 `tsc --noEmit` → `vitest run` → `pnpm build` → Playwright WebKit smoke test.
 
-**Deploy:** Cloudflare Pages Git integration builds and deploys `main` itself (no
-API token in GitHub). Pages settings: build command `pnpm build` (which runs
-`vite build` then `gen-headers.ts`), output directory `dist`. Set
-`VITE_TELEMETRY_*` for the **Production** environment only, so preview
-deployments send no telemetry. In Phase 6, verify from the build log that
-Cloudflare uses the pnpm version from `packageManager` and the Node version
-from `.nvmrc`; if not, set them explicitly in Pages build settings.
+**Deploy:** Cloudflare Pages Git integration builds and deploys itself (no
+API token in GitHub). Connected in Phase 5, earlier than planned: project
+`depositsct`, no framework preset, build command `pnpm build` (which runs
+`vite build`, then `gen-headers.ts` from Phase 6), output directory `dist`.
+Every branch gets a preview at `<branch>.depositsct.pages.dev`, restricted to
+the maintainer by Cloudflare Access; PRs use it for real-phone checks (share and
+clipboard need HTTPS). The production branch is a placeholder, `production`,
+made from the first commit, so nothing is published; at launch it is switched
+to `main`. Set `VITE_TELEMETRY_*` for the **Production** environment only, so
+preview deployments send no telemetry.
+
+Build verified on the Phase 5 preview (maintainer, from the build log), with no
+Node or pnpm version variables in the Pages settings: Cloudflare takes Node from
+`.nvmrc` and pnpm 12.6.0 from `packageManager`, the lockfile passes the §3.1
+supply-chain policies, and the bundle sizes match local builds. **`.nvmrc` holds
+an exact version** (e.g. `24.16.0`), not a major: with `24`, Cloudflare resolved
+an older 24.x than Corepack needs, and it warned `EBADENGINE`. The exact pin
+keeps Cloudflare, CI (`node-version-file: .nvmrc`), and local builds on the same
+Node; bump it deliberately. The preview's HTML was also checked by the
+maintainer: no `cloudflareinsights` script is injected (recheck after the custom
+domain is attached, §18).
 `VITE_APP_VERSION` comes from Cloudflare's commit SHA env var in production
 builds and from `git rev-parse --short HEAD` locally.
 
@@ -1425,11 +1596,15 @@ Work phase by phase. Stop at the end of each phase and report to the maintainer.
 4. **Uploads + signature.** Image pipeline incl. grayscale toggle, PDF import,
    slots incl. "Other documents", size meter, signature pad.
 5. **Send + storage + erase.** Tiered send, `.eml`, draftStore both backends,
-   device choice on Welcome, 30-day expiry, erase dialog and routine, confirmation page.
+   device choice on Welcome, 30-day expiry, erase dialog and routine, confirmation page,
+   browser Back (§7), erase across tabs (§9.3). Its PR uses the branch preview
+   URL (§16) for the maintainer's phone checks.
 6. **Hardening + deploy.** Telemetry module (§19) with endpoint unset by default,
    `gen-headers.ts`, public source maps, verify CSP in production build (no
    violations in console), Playwright smoke test, CI workflows (incl. keepalive),
-   Dependabot, Cloudflare Pages build verification (§16), README (what it is,
+   Dependabot, the `_headers` check on a preview (§16: the Pages build itself
+   is already verified), the smoke test's
+   `cloudflareinsights` check, README (what it is,
    privacy model, how to update the form template (pointing to §5.3),
    maintenance commands, and a **form revision log** table: revision, date
    adopted, commit; first row is Rev 8/26), Terms and
@@ -1465,11 +1640,18 @@ Work phase by phase. Stop at the end of each phase and report to the maintainer.
   Renaming = change `app.name` in `i18n/en.json`.
 - Register domain; decide subdomain-per-tool vs. path (code supports both).
 - Usability test with 2–3 real tenants on their own phones before launch.
+- Before launch, on an Android phone (Chrome), on a preview deploy: Phase 5's phone checks
+  (device mode saves and restores answers and photos; Back and Forward follow
+  the wizard; the share sheet attaches the PDF, Cancel is silent, Share stays
+  disabled until Copy; erase leaves no filled page reachable). Passed on iPhone
+  in Phase 5; Android wasn't available then.
 - Choose the analytics tool (§19.1), create the free account, set
   `VITE_TELEMETRY_ENDPOINT` and `VITE_TELEMETRY_SITE_ID` in Cloudflare Pages
   (Production environment only).
 - Install the GitHub CLI and run `gh auth login` once, for `pnpm watcher:*`.
-- Connect the repo to Cloudflare Pages; disable automatic Web Analytics injection.
+- At launch: point the Pages production branch at `main` and attach the custom domain.
+- Before launch, after attaching the custom domain: confirm Cloudflare Web Analytics is disabled for the project and no `static.cloudflareinsights.com` script is injected (§2.1).
+- Future: two tabs editing in device mode overwrite each other (last save wins); consider a one-active-tab lock.
 
 ---
 

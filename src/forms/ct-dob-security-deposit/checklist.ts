@@ -20,6 +20,22 @@ export type SlotId =
   | 'cashForKeysAgreement'
   | 'other';
 
+/** Every slot, in checklist order. */
+export const SLOT_IDS: readonly SlotId[] = [
+  'depositProof',
+  'rentalAgreement',
+  'correspondence',
+  'forwardingAddress',
+  'proofOfAge',
+  'overageLetter62',
+  'overageLetter',
+  'escrowLetter',
+  'certifiedMailReceipt',
+  'certifiedMailReturnReceipt',
+  'cashForKeysAgreement',
+  'other',
+];
+
 export interface EvidenceSlot {
   id: SlotId;
   label: string;
