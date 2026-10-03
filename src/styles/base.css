@@ -577,7 +577,8 @@ legend.field-label:has(.question) {
   border: var(--border-width) solid var(--color-border);
   border-radius: var(--radius-sm);
   background: var(--color-surface);
-  object-fit: cover;
+  /* The whole photo, scaled down, so orientation and framing are visible. */
+  object-fit: contain;
 }
 
 .thumb-gray {
