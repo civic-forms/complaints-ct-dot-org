@@ -1474,8 +1474,11 @@ the maintainer by Cloudflare Access; PRs use it for real-phone checks (share and
 clipboard need HTTPS). The production branch is a placeholder, `production`,
 made from the first commit, so nothing is published; at launch it is switched
 to `main`. Set `VITE_TELEMETRY_*` for the **Production** environment only, so
-preview deployments send no telemetry. The Node and pnpm versions:
-checked on the Phase 5 preview build (result in that PR).
+preview deployments send no telemetry. The Phase 5 preview built and deployed
+with no extra build settings (no Node or pnpm version variables). Still to
+confirm from the build log (Phase 6): that Cloudflare used the pnpm version from
+`packageManager` and the Node version from `.nvmrc`; if not, set
+`NODE_VERSION` / `PNPM_VERSION` in the Pages build settings.
 `VITE_APP_VERSION` comes from Cloudflare's commit SHA env var in production
 builds and from `git rev-parse --short HEAD` locally.
 
