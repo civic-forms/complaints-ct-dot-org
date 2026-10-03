@@ -9,6 +9,8 @@ export type Cents = number | null;
 
 export interface Address {
   street: string;
+  /** Apartment, suite, or unit (optional). Printed in the form's one street box, after the street. */
+  streetLine2: string;
   city: string;
   state: string;
   zip: string;
@@ -73,6 +75,8 @@ export interface DepositComplaintState {
   landlord: Person;
   rental: {
     unitStreet: string;
+    /** Apartment, suite, or unit (optional). Printed in the form's one street box, after the street. */
+    streetLine2: string;
     housingComplexName: string;
     city: string;
     state: string;
@@ -117,6 +121,7 @@ export interface DepositComplaintState {
 const emptyPerson = (): Person => ({
   name: '',
   street: '',
+  streetLine2: '',
   city: '',
   state: '',
   zip: '',
@@ -161,6 +166,7 @@ export function initialState(): DepositComplaintState {
     landlord: emptyPerson(),
     rental: {
       unitStreet: '',
+      streetLine2: '',
       housingComplexName: '',
       city: '',
       state: 'CT',

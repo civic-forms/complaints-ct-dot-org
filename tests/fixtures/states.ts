@@ -33,7 +33,8 @@ export function makeState(patch: DeepPartial<DepositComplaintState> = {}): Depos
 
 const baseTenant = {
   name: 'Jordan Q. Sample',
-  street: '12 Example Lane, Apt 3',
+  street: '12 Example Lane',
+  streetLine2: 'Apt 3',
   city: 'Springfield',
   state: 'MA',
   zip: '01101',
@@ -44,6 +45,7 @@ const baseTenant = {
 const baseLandlord = {
   name: 'Placeholder Properties LLC',
   street: '400 Fictional Ave',
+  streetLine2: 'Suite 200',
   city: 'New Haven',
   state: 'CT',
   zip: '06510',
@@ -52,7 +54,8 @@ const baseLandlord = {
 };
 
 const baseRental = {
-  unitStreet: '77 Imaginary St, Unit 2B',
+  unitStreet: '77 Imaginary St',
+  streetLine2: 'Unit 2B',
   housingComplexName: '',
   city: 'Hartford',
   state: 'CT',

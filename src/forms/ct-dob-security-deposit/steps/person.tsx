@@ -14,13 +14,16 @@ type Who = 'tenant' | 'landlord';
 
 function fieldProps(who: Who, key: AddressKey, props: StepProps) {
   const k = kit(props);
+  // The second street line prints in the form's one street box, so it shares
+  // that box's character check and has no form label of its own.
+  const formKey = key === 'streetLine2' ? 'street' : key;
   return {
     ...addressAttrs(who, key),
     label: en.fields[who][key],
     value: props.state[who][key],
     onInput: (value: string) => k.patch(who, { [key]: value }),
-    hint: onTheForm(verbatim.fieldLabels[who][key]),
-    unprintable: k.chars(`${who}.${key}` as TextPath),
+    hint: key === 'streetLine2' ? undefined : onTheForm(verbatim.fieldLabels[who][formKey]),
+    unprintable: k.chars(`${who}.${formKey}` as TextPath),
     errorId: k.errorId,
   };
 }
@@ -70,6 +73,14 @@ function address(who: Who) {
     return (
       <>
         <TextField {...fieldProps(who, 'street', props)} required={required} />
+        <TextField
+          {...fieldProps(who, 'streetLine2', props)}
+          label={
+            <>
+              {en.fields[who].streetLine2} <span class="optional">{en.common.optional}</span>
+            </>
+          }
+        />
         <TextField {...fieldProps(who, 'city', props)} required={required} />
         <div class="field-row">
           <TextField {...fieldProps(who, 'state', props)} {...STATE_INPUT} required={required} />
