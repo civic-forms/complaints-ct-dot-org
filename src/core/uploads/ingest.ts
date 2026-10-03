@@ -6,7 +6,7 @@ import { createObjectUrl } from '../blob-urls.ts';
 import { compressImage } from '../images/compress.ts';
 import { ImageDecodeError } from '../images/errors.ts';
 import type { ImagePreset } from '../images/presets.ts';
-import { PdfLockedError } from '../pdf/errors.ts';
+import { PdfLockedError, PdfUnreadableError } from '../pdf/errors.ts';
 import type { UploadedFile } from './store.ts';
 
 /** Handled failures; `pdf_encrypted` etc. match the §19.4 known-issue codes. */
@@ -45,22 +45,25 @@ export async function ingestFile(file: File, preset: ImagePreset): Promise<Inges
   if (kind === 'pdf') {
     const bytes = new Uint8Array(await file.arrayBuffer());
     const { loadUploadedPdf } = await import('../pdf/pages.ts');
+    let pages: number;
     try {
-      const doc = await loadUploadedPdf(bytes);
-      return {
-        ok: true,
-        file: {
-          kind: 'pdf',
-          id: newId(),
-          name: file.name,
-          pages: doc.getPageCount(),
-          pdf: new Blob([bytes], { type: 'application/pdf' }),
-        },
-      };
+      pages = (await loadUploadedPdf(bytes)).getPageCount();
     } catch (error) {
       // Telemetry (Phase 6): known_issue pdf_encrypted / pdf_unreadable.
-      return fail(error instanceof PdfLockedError ? 'pdf_encrypted' : 'pdf_unreadable');
+      if (error instanceof PdfLockedError) return fail('pdf_encrypted');
+      if (error instanceof PdfUnreadableError) return fail('pdf_unreadable');
+      throw error;
     }
+    return {
+      ok: true,
+      file: {
+        kind: 'pdf',
+        id: newId(),
+        name: file.name,
+        pages,
+        pdf: new Blob([bytes], { type: 'application/pdf' }),
+      },
+    };
   }
   return fail('unsupported_type');
 }
@@ -85,4 +88,12 @@ export async function imageFile(
   };
 }
 
-const newId = () => crypto.randomUUID();
+/**
+ * A random id for a file (128 bits, hex). Not `crypto.randomUUID`, which exists
+ * only on secure origins, so it failed when the app was opened over plain http
+ * on a local network (e.g. testing from a phone).
+ */
+export function newId(): string {
+  const bytes = crypto.getRandomValues(new Uint8Array(16));
+  return Array.from(bytes, (b) => b.toString(16).padStart(2, '0')).join('');
+}

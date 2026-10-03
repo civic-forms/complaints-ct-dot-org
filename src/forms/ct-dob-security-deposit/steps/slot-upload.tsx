@@ -76,8 +76,9 @@ export function SlotUpload({
         const result = await ingestFile(file, STANDARD);
         if (result.ok) updateUploads((s) => addFiles(s, slotId, [result.file]));
         else failed.push({ id: i, name: result.name, error: result.error });
-      } catch {
+      } catch (error) {
         // Telemetry (Phase 6): operation_failed add_file.
+        if (import.meta.env.DEV) console.error(error);
         failed.push({ id: i, name: file.name, error: 'unexpected' });
       }
     }

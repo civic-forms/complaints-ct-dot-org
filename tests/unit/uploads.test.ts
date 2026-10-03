@@ -1,7 +1,9 @@
 // The upload store and how the form uses it (CLAUDE.md §8.4, §8.5).
 
+import { readdirSync, readFileSync } from 'node:fs';
+import { join } from 'node:path';
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { fileKind } from '../../src/core/uploads/ingest.ts';
+import { fileKind, newId } from '../../src/core/uploads/ingest.ts';
 import {
   activeBlob,
   addFiles,
@@ -28,6 +30,7 @@ import { read } from '../helpers/assets.ts';
 import { sampleAttachmentPdf } from '../helpers/pdfs.ts';
 
 const jpegBytes = read('tests/fixtures/receipt.jpg');
+const SRC = join(import.meta.dirname, '../../src');
 
 type ImageFile = Extract<UploadedFile, { kind: 'image' }>;
 
@@ -100,6 +103,28 @@ describe('upload store', () => {
     expect(fileKind({ type: '', name: 'lease.PDF' })).toBe('pdf');
     expect(fileKind({ type: 'text/plain', name: 'a.txt' })).toBeNull();
     expect(fileKind({ type: '', name: 'notes' })).toBeNull();
+  });
+});
+
+describe('file ids', () => {
+  it('works where crypto.randomUUID is missing (plain http on a local network)', () => {
+    vi.stubGlobal('crypto', {
+      getRandomValues: globalThis.crypto.getRandomValues.bind(globalThis.crypto),
+    });
+    try {
+      const ids = new Set(Array.from({ length: 1000 }, newId));
+      expect(ids.size).toBe(1000);
+      for (const id of ids) expect(id).toMatch(/^[0-9a-f]{32}$/);
+    } finally {
+      vi.unstubAllGlobals();
+    }
+  });
+
+  it('no source file uses APIs that exist only on secure origins', () => {
+    const offenders = readdirSync(SRC, { recursive: true, encoding: 'utf8' })
+      .filter((path) => /\.(ts|tsx)$/.test(path))
+      .filter((path) => /\brandomUUID\s*\(/.test(readFileSync(join(SRC, path), 'utf8')));
+    expect(offenders).toEqual([]);
   });
 });
 
