@@ -50,7 +50,11 @@
       "startDeviceHint": "Only if you're the only one who uses it",
       "spanishHeading": "Formulario en español",
       "spanishText": "The Department of Banking publishes an official Spanish version of this form.",
-      "spanishLink": "Ver el formulario en español en el sitio del Departamento de Bancos"
+      "spanishLink": "Ver el formulario en español en el sitio del Departamento de Bancos",
+      "resumeHeading": "You have a saved form",
+      "resumeText": "Continue where you left off, or start over. Starting over erases the saved form.",
+      "resumeContinue": "Continue your saved form",
+      "resumeStartOver": "Start over"
     },
     "needs": {
       "title": "What you'll need",
@@ -98,6 +102,41 @@
     "periodicRent": {
       "periodicRentTerm": "Periodic rent",
       "periodicRentDefinition": "your regular rent payment (for most people, monthly rent)"
+    },
+    "send": {
+      "intro": "Your signed complaint form and documents are in one PDF, ready to email to the Department of Banking from your own email account.",
+      "missingIntro": "Before you can send, these are needed:",
+      "building": "Preparing your signed PDF…",
+      "error": "We couldn't prepare your PDF.",
+      "retry": "Try again",
+      "toHeading": "Send it to",
+      "pasteNote": "Paste this into the To line.",
+      "copy": "Copy address",
+      "copied": "Copied.",
+      "copyFailed": "We couldn't copy it. Select the address and copy it yourself.",
+      "selectToCopy": "Select the address to copy it.",
+      "share": "Send with your email app",
+      "shareFailed": "Your device couldn't open the share options. Use the button below instead.",
+      "mailto": "Download the PDF and open your email",
+      "attachNote": "Attach the downloaded PDF before sending.",
+      "eml": "Open as Outlook draft",
+      "emlHelp": "Downloads an email draft with your PDF attached, for desktop email apps such as Outlook.",
+      "download": "Download PDF",
+      "downloadUnavailable": "The PDF can be downloaded once everything needed is filled in.",
+      "afterSend": "When you've sent your email, continue.",
+      "subject": "Security Deposit Complaint - {name} - {address}",
+      "body": "Attached is my completed Security Deposit Complaint Form and supporting documents.\n\n{name}\n{phone}"
+    },
+    "confirmation": {
+      "title": "After you send",
+      "sentFolder": "Check your Sent folder to make sure your email went out.",
+      "phonesHeading": "Questions about your complaint?",
+      "phonesText": "You can call the Department of Banking:",
+      "sentButton": "I've sent it",
+      "sentHelp": "Then you can erase your information from this browser.",
+      "sharedHeading": "Using a shared or public computer?",
+      "sharedButton": "Erase my information from this browser",
+      "sharedNote": "Closing this tab also erases what you entered here (unless you chose to save progress on this device)."
     }
   },
   "fields": {
@@ -333,6 +372,9 @@
     },
     "sign": {
       "title": "Read and sign"
+    },
+    "send": {
+      "title": "Send your complaint"
     }
   },
   "pages": {
@@ -359,5 +401,40 @@
     "docketNumber": "What is the docket number?",
     "moreInfoNeededTitle": "A few more questions",
     "moreInfoNeeded": "Your change means we need a bit more information before your review."
+  },
+  "header": {
+    "startOver": "Start over and erase",
+    "saved": "Saved on this device",
+    "erase": "Erase",
+    "savedNote": "Saved on this device for up to 30 days. Some browsers, especially Safari on iPhone, may clear it sooner if you don't visit for a while.",
+    "savingMenu": "Saving options",
+    "sessionStatus": "Your answers are kept only until you close this tab.",
+    "toSession": "Stop saving on this device",
+    "toDevice": "Save my progress on this device",
+    "toDeviceHint": "Only if you're the only one who uses it"
+  },
+  "notices": {
+    "erased": "Your information has been erased.",
+    "eraseFailed": "Some information couldn't be erased. Close any other tabs with this app open, then try again.",
+    "eraseRetry": "Erase",
+    "expired": "Your saved form was more than 30 days old, so it was erased.",
+    "remoteErased": "Your information was erased from another tab.",
+    "storageFailed": "We can't save your progress in this browser, so your answers are kept only while this tab is open.",
+    "storageFull": "This device is out of storage space, so your progress isn't being saved. Your answers are kept only while this tab is open.",
+    "filesToReadd": "Your answers were kept, but files aren't kept when the tab reloads. Please add them again for:"
+  },
+  "eraseDialog": {
+    "title": "Before you erase",
+    "intro": "This will remove everything you entered in this app from this browser. It can't reach copies saved elsewhere, so please also:",
+    "items": [
+      "Delete the complaint PDF from your Downloads folder, if you downloaded it",
+      "Sign out of your email, if you signed in on this computer"
+    ],
+    "cancel": "Cancel",
+    "confirm": "Erase now",
+    "tabsOne": "This app is also open in 1 other tab. Erasing here will clear that tab too.",
+    "tabsMany": "This app is also open in {n} other tabs. Erasing here will clear those tabs too.",
+    "tabsUnknown": "This also clears this app in any other open tabs.",
+    "erasing": "Erasing…"
   }
 }

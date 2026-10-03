@@ -15,6 +15,7 @@ export const CHAPTER_IDS = [
   'disclaimer',
   'review',
   'sign',
+  'send',
 ] as const;
 
 export type ChapterId = (typeof CHAPTER_IDS)[number];
@@ -103,6 +104,8 @@ export const STEP_IDS = [
   'review.moreInfoNeeded',
   'sign.statements',
   'sign.signature',
+  'send',
+  'confirmation',
 ] as const;
 
 export type StepId = (typeof STEP_IDS)[number];

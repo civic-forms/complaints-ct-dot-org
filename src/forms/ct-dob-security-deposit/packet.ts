@@ -2,7 +2,7 @@
 // signed final for Send.
 
 import { StandardFonts } from 'pdf-lib';
-import { formatDateMMDDYY, todayIso } from '../../core/format/date.ts';
+import { formatDateMMDDYY } from '../../core/format/date.ts';
 import {
   type AssembleResult,
   type AttachmentGroup,
@@ -180,14 +180,6 @@ function decodePngDataUrl(dataUrl: string | null): Uint8Array | null {
   return bytes;
 }
 
-/** `CT-Security-Deposit-Complaint_{TenantLastName}_{YYYY-MM-DD}.pdf` (§8.6). */
-export function packetFilename(state: DepositComplaintState, today: string = todayIso()): string {
-  const lastName = state.tenant.name.trim().split(/\s+/).at(-1) ?? '';
-  const safe = (s: string) =>
-    s
-      .normalize('NFD')
-      .replace(/[̀-ͯ]/g, '')
-      .replace(/[^A-Za-z0-9_-]/g, '');
-  const parts = [en.pdf.filenamePrefix, safe(lastName), safe(today)].filter(Boolean);
-  return `${parts.join('_')}.pdf`;
-}
+// Kept with the email text (no pdf-lib), so Send can name the file without
+// loading pdf-lib into the main bundle.
+export { packetFilename } from './send.ts';

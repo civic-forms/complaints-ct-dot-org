@@ -38,7 +38,7 @@ describe('page registry', () => {
   });
 
   it('opens each chapter with an intro, except the one-page ones and Read and sign', () => {
-    const noIntro = ['comments', 'disclaimer', 'review', 'sign'];
+    const noIntro = ['comments', 'disclaimer', 'review', 'sign', 'send'];
     for (const chapter of CHAPTER_IDS) {
       const first = pages.find((p) => p.chapter === chapter);
       expect(first?.kind === 'intro', chapter).toBe(!noIntro.includes(chapter));
@@ -70,6 +70,14 @@ describe('navigation', () => {
 
   it('never enters the edit interstitial in the normal flow', () => {
     expect(idAt(nextIndex(pages, at('review'), currentTenant))).toBe('sign.statements');
+  });
+
+  it('ends with Send, then Confirmation (no progress, like Welcome)', () => {
+    expect(idAt(nextIndex(pages, at('sign.signature'), currentTenant))).toBe('send');
+    expect(idAt(nextIndex(pages, at('send'), currentTenant))).toBe('confirmation');
+    expect(nextIndex(pages, at('confirmation'), currentTenant)).toBe(at('confirmation'));
+    expect(chapterProgress(pages, at('confirmation'), currentTenant)).toBeNull();
+    expect(chapterProgress(pages, at('send'), currentTenant)).toMatchObject({ n: null });
   });
 
   it('shows progress within the chapter', () => {

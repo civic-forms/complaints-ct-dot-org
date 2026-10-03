@@ -196,7 +196,8 @@ function EditLink({ page, what, goTo }: { page: StepId; what: string; goTo: GoTo
   );
 }
 
-function IssueList({ issues, goTo }: { issues: readonly Issue[]; goTo: GoTo }) {
+/** Issues grouped by chapter, each with an Edit link (Review; Send's missing list). */
+export function IssueList({ issues, goTo }: { issues: readonly Issue[]; goTo: GoTo }) {
   const byChapter = CHAPTER_IDS.map((chapter) => ({
     chapter,
     items: issues.filter((i) => specOf(i.step).chapter === chapter),
